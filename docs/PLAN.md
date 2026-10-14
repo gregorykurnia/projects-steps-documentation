@@ -308,6 +308,7 @@ Built in one session by **Sonnet 5.5 High** (owner's choice). Order, committing 
 - 2026-10-14 (v0.3): Build locally first; GitHub, Neon and Vercel are linked afterwards (checklist item 1 postponed). Until then Postgres 17 runs locally (Homebrew `postgresql@17`, databases `ai_build_log` for dev and `ai_build_log_test` for tests, connection strings in `.env.local` / `.env.test`). `src/db/client.ts` picks the driver from the URL: `*.neon.tech` uses the Neon serverless driver, anything else uses `pg`, so nothing changes when Neon is linked.
 - 2026-10-14 (v0.3): "Already added" detection compares against every step in the project including soft-deleted ones, so re-pasting my whole running notes doesn't bring back a step I deleted (restore it from "Recently deleted" instead). Steps with identical title and numbers within one paste count once.
 - 2026-10-14 (v0.3): Costs are stored with 4 decimals (`numeric(12,4)`); more decimals in a paste are rounded. Writes are validated by Zod on the server (`src/lib/schemas.ts`): paste ≤ 100,000 characters, title ≤ 300, notes ≤ 2,000, ≤ 10 model lines per step.
+- 2026-10-14 (v0.3): GitHub and Neon linked (checklist item 1, partly). `.env.local` now points at Neon `production`; tests stay on the local `ai_build_log_test` database until a Neon `test` branch exists. Vercel not linked yet.
 - 2026-10-14 (v0.3): The scaffold's `cacheComponents` / `partialPrefetching` flags are off: pages read the database on every request (dynamic), which is what this app wants. Radix primitives (`radix-ui`) are used directly with our tokens instead of the shadcn CLI, to avoid the default shadcn look.
 
 ## Project details
@@ -315,7 +316,7 @@ Built in one session by **Sonnet 5.5 High** (owner's choice). Order, committing 
 |---|---|
 | App name | AI Build Log |
 | Folder | `~/projects/projects-steps-documentation` |
-| GitHub repo | (pending) |
-| Neon project ID | (pending) |
+| GitHub repo | https://github.com/gregorykurnia/projects-steps-documentation |
+| Neon project ID | (not known yet; endpoint `ep-silent-queen-b3yeost6`, region `ap-southeast-1`, database `neondb`) |
 | Vercel project | (pending) |
 | Live URL | (pending) |
