@@ -273,7 +273,7 @@ Built in one session by **Sonnet 5.5 High** (owner's choice). Order, committing 
 - [x] 5. `pricing.ts` + `calibrate-pricing.ts` (Haiku cache-read price checked against Anthropic's pricing page), `stats.ts`, `format.ts`, with unit tests
 - [x] 6. Server Actions (add steps with duplicate skipping, edit, reorder, soft delete, restore, projects) + seed script; seeded on `test` (and `production` with my OK)
 - [x] 7. Tokens, AppShell, PageHeader, theme toggle, fonts, favicon, 404/error, `noindex` + `robots.txt`
-- [ ] 8. Home page `/`
+- [x] 8. Home page `/`
 - [ ] 9. Project page `/p/[slug]` incl. stats per model and cost bars
 - [ ] 10. Paste panel, edit step, project settings, new project, undo / recently deleted
 - [ ] 11. Playwright: smoke (home + project page read the DB) and paste flow (paste the DEUS notes into an empty project → 7 steps; re-paste → 0 added, 7 "already added"); screenshots at 390 and 1280, light and dark, checked by eye

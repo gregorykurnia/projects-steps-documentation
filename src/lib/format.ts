@@ -34,3 +34,8 @@ export function formatDuration(seconds: number | null | undefined): string {
   const m = Math.floor((s % 3600) / 60);
   return m ? `${h}h ${m}m` : `${h}h`;
 }
+
+/** 14 Oct 2026 */
+export function formatDate(d: Date): string {
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+}
