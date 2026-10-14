@@ -20,6 +20,13 @@ function connect(): Db {
 
 const globalForDb = globalThis as unknown as { __db?: Db };
 
-// One pool per process, kept across dev hot reloads.
-export const db: Db = (globalForDb.__db ??= connect());
+// One pool per process, kept across dev hot reloads. Connects on first use, not on import,
+// so `next build` doesn't need DATABASE_URL (pages read the database at request time).
+export const db: Db = new Proxy({} as Db, {
+  get(_, prop) {
+    const real = (globalForDb.__db ??= connect());
+    const value = Reflect.get(real, prop, real);
+    return typeof value === "function" ? value.bind(real) : value;
+  },
+});
 export { schema };
