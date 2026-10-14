@@ -20,7 +20,7 @@ export const normaliseTitle = (title: string) =>
 type UsageNumbers = Pick<
   ParsedUsage,
   "model" | "effort" | "inputTokens" | "outputTokens" | "cacheRead" | "cacheWrite"
->;
+> & { costUsd?: number | null };
 
 /** Identifies a step by title and usage numbers (cost and durations excluded), to spot re-pasted steps. */
 export function stepFingerprint(title: string, usages: UsageNumbers[]): string {
