@@ -92,13 +92,16 @@ When a model line has no cost, the site estimates it from the token counts and t
 
 Official prices per million tokens (Anthropic, as of 2026-10):
 
-| Model | Input | Output | Cache read | Cache write |
+| Model | Input | Output | Cache read | Cache write 5m / 1h |
 |---|---|---|---|---|
-| Opus 5.5 | $4.00 | $20.00 | $0.20 | from input × multiplier |
-| Sonnet 5.5 | $2.00 | $10.00 | $0.20 | from input × multiplier |
-| Haiku 5.5 | $0.10 ($0.50 for prompts over 100K) | $0.50 ($2.50 over 100K) | check at build | from input × multiplier |
+| Opus 5.5 | $4.00 | $20.00 | $0.20 | $5.00 / $8.00 |
+| Sonnet 5.5 | $2.00 | $10.00 | $0.10 | $2.50 / $4.00 |
+| Haiku 5.5 (prompts up to 100K) | $0.10 | $0.50 | $0.01 | $0.125 / $0.20 |
+| Haiku 5.5 (prompts over 100K) | $0.50 | $2.50 | $0.05 | $0.625 / $1.00 |
 
-Two things the token totals alone can't tell: whether cache writes were 5-minute (1.25× input) or 1-hour (2× input), and whether Haiku requests were in the over-100K price tier. So **the rates are calibrated against my own recorded costs**: at build time a script tries those options per model against every step that has a recorded cost and keeps the closest. A quick check on the seed data already shows why: Sonnet 5.5 matches 5-minute writes, Opus 5.5 lands near 1-hour writes, and Haiku 5.5 only matches the over-100K tier. The page shows the accuracy in a footnote ("Estimates use rates calibrated on 19 recorded steps, typically within ±x%"). Prices live in one file (`src/lib/pricing.ts`) so they're easy to update.
+(Checked against Anthropic's pricing page on 2026-10-14 at build time. v0.2 had Sonnet cache reads at $0.20 and Haiku's unknown; the page says $0.10 and $0.01.)
+
+Two things the token totals alone can't tell: whether cache writes were 5-minute or 1-hour, and whether Haiku requests were in the over-100K price tier. So **the options are calibrated against my own recorded costs**: `npm run calibrate` tries each option per model against every recorded usage line in the seed data and prints the error of each. Result on 2026-10-14 (21 recorded lines): Opus 5.5 and Sonnet 5.5 match 1-hour cache writes (median error 0.2%), Haiku 5.5 matches the over-100K tier with 5-minute writes (median error 5.3%, only 2 lines). The page shows a footnote: "Estimates use rates calibrated on 21 recorded steps, typically within ±5%". Prices live in one file (`src/lib/pricing.ts`) so they're easy to update.
 
 ### 1.6 Look and feel (decided here, no design directions)
 - **Personality:** calm, precise, editorial-meets-dashboard. Think Linear / Vercel docs: white space, crisp numbers, one accent colour.
@@ -267,7 +270,7 @@ Built in one session by **Sonnet 5.5 High** (owner's choice). Order, committing 
 - [x] 2. Scaffold Next.js + Tailwind + shadcn + Drizzle + Vitest + Playwright, with npm scripts `typecheck`, `lint`, `build`, `test`, `test:e2e`, `db:generate`, `db:migrate:test`, `db:migrate`, `db:seed`, `calibrate`
 - [x] 3. Schema + first migration (local `test` and local dev DB; Neon `production` still waits for my approval)
 - [x] 4. `parse-notes.ts` with unit tests covering **every line of both seed files** (21 steps, phases, "Phase 0", multi-model step, missing cost, one-line titles with commas and "…", durations, lowercase effort)
-- [ ] 5. `pricing.ts` + `calibrate-pricing.ts` (Haiku cache-read price checked against Anthropic's pricing page), `stats.ts`, `format.ts`, with unit tests
+- [x] 5. `pricing.ts` + `calibrate-pricing.ts` (Haiku cache-read price checked against Anthropic's pricing page), `stats.ts`, `format.ts`, with unit tests
 - [ ] 6. Server Actions (add steps with duplicate skipping, edit, reorder, soft delete, restore, projects) + seed script; seeded on `test` (and `production` with my OK)
 - [ ] 7. Tokens, AppShell, PageHeader, theme toggle, fonts, favicon, 404/error, `noindex` + `robots.txt`
 - [ ] 8. Home page `/`
