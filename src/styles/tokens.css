@@ -1,0 +1,55 @@
+/* Design tokens from docs/PLAN.md §2.6. The only place raw colour values live. */
+:root {
+  --bg: #fafafa;
+  --surface: #ffffff;
+  --border: #e4e4e7;
+  --text: #18181b;
+  --text-muted: #71717a;
+  --accent: #4f46e5;
+  --accent-soft: #eef2ff;
+  --on-accent: #ffffff;
+  --opus: #7c3aed;
+  --sonnet: #0284c7;
+  --haiku: #059669;
+  --danger: #dc2626;
+  --success: #16a34a;
+  --radius: 10px;
+  color-scheme: light;
+}
+
+.dark {
+  --bg: #09090b;
+  --surface: #18181b;
+  --border: #27272a;
+  --text: #fafafa;
+  --text-muted: #a1a1aa;
+  --accent: #818cf8;
+  --accent-soft: #1e1b4b;
+  --on-accent: #09090b;
+  --opus: #a78bfa;
+  --sonnet: #38bdf8;
+  --haiku: #34d399;
+  --danger: #f87171;
+  --success: #4ade80;
+  color-scheme: dark;
+}
+
+/* No saved choice: follow the system. Same values as .dark. */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light):not(.dark) {
+    --bg: #09090b;
+    --surface: #18181b;
+    --border: #27272a;
+    --text: #fafafa;
+    --text-muted: #a1a1aa;
+    --accent: #818cf8;
+    --accent-soft: #1e1b4b;
+    --on-accent: #09090b;
+    --opus: #a78bfa;
+    --sonnet: #38bdf8;
+    --haiku: #34d399;
+    --danger: #f87171;
+    --success: #4ade80;
+    color-scheme: dark;
+  }
+}

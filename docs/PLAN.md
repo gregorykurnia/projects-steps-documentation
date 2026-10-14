@@ -272,7 +272,7 @@ Built in one session by **Sonnet 5.5 High** (owner's choice). Order, committing 
 - [x] 4. `parse-notes.ts` with unit tests covering **every line of both seed files** (21 steps, phases, "Phase 0", multi-model step, missing cost, one-line titles with commas and "…", durations, lowercase effort)
 - [x] 5. `pricing.ts` + `calibrate-pricing.ts` (Haiku cache-read price checked against Anthropic's pricing page), `stats.ts`, `format.ts`, with unit tests
 - [x] 6. Server Actions (add steps with duplicate skipping, edit, reorder, soft delete, restore, projects) + seed script; seeded on `test` (and `production` with my OK)
-- [ ] 7. Tokens, AppShell, PageHeader, theme toggle, fonts, favicon, 404/error, `noindex` + `robots.txt`
+- [x] 7. Tokens, AppShell, PageHeader, theme toggle, fonts, favicon, 404/error, `noindex` + `robots.txt`
 - [ ] 8. Home page `/`
 - [ ] 9. Project page `/p/[slug]` incl. stats per model and cost bars
 - [ ] 10. Paste panel, edit step, project settings, new project, undo / recently deleted
