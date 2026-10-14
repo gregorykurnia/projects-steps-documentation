@@ -1,6 +1,8 @@
+export type Effort = "low" | "medium" | "high" | "xhigh" | "max";
+
 export type ParsedUsage = {
   model: string;
-  effort: string | null;
+  effort: Effort | null;
   inputTokens: number;
   outputTokens: number;
   cacheRead: number;
@@ -79,7 +81,7 @@ function parseModelLine(line: string): ModelLine | null {
   const rest = line.slice(m.index + m[0].length);
   const usage: ParsedUsage = {
     model: m[1].toLowerCase(),
-    effort: m[2] ? m[2].toLowerCase() : null,
+    effort: m[2] ? (m[2].toLowerCase() as Effort) : null,
     inputTokens: 0,
     outputTokens: 0,
     cacheRead: 0,

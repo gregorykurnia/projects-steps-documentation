@@ -17,10 +17,10 @@ function hash(str: string): string {
 export const normaliseTitle = (title: string) =>
   title.trim().replace(/:\s*$/, "").replace(/\s+/g, " ").toLowerCase();
 
-type UsageNumbers = Pick<
-  ParsedUsage,
-  "model" | "effort" | "inputTokens" | "outputTokens" | "cacheRead" | "cacheWrite"
-> & { costUsd?: number | null };
+type UsageNumbers = Pick<ParsedUsage, "model" | "inputTokens" | "outputTokens" | "cacheRead" | "cacheWrite"> & {
+  effort: string | null;
+  costUsd?: number | null;
+};
 
 /** Identifies a step by title and usage numbers (cost and durations excluded), to spot re-pasted steps. */
 export function stepFingerprint(title: string, usages: UsageNumbers[]): string {

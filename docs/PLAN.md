@@ -271,7 +271,7 @@ Built in one session by **Sonnet 5.5 High** (owner's choice). Order, committing 
 - [x] 3. Schema + first migration (local `test` and local dev DB; Neon `production` still waits for my approval)
 - [x] 4. `parse-notes.ts` with unit tests covering **every line of both seed files** (21 steps, phases, "Phase 0", multi-model step, missing cost, one-line titles with commas and "…", durations, lowercase effort)
 - [x] 5. `pricing.ts` + `calibrate-pricing.ts` (Haiku cache-read price checked against Anthropic's pricing page), `stats.ts`, `format.ts`, with unit tests
-- [ ] 6. Server Actions (add steps with duplicate skipping, edit, reorder, soft delete, restore, projects) + seed script; seeded on `test` (and `production` with my OK)
+- [x] 6. Server Actions (add steps with duplicate skipping, edit, reorder, soft delete, restore, projects) + seed script; seeded on `test` (and `production` with my OK)
 - [ ] 7. Tokens, AppShell, PageHeader, theme toggle, fonts, favicon, 404/error, `noindex` + `robots.txt`
 - [ ] 8. Home page `/`
 - [ ] 9. Project page `/p/[slug]` incl. stats per model and cost bars
@@ -306,6 +306,8 @@ Built in one session by **Sonnet 5.5 High** (owner's choice). Order, committing 
 - 2026-10-14 (v0.2): Stats per model (and model + effort) on every project and across all projects.
 - 2026-10-14 (v0.2): Build model is Sonnet 5.5 High (owner's choice).
 - 2026-10-14 (v0.3): Build locally first; GitHub, Neon and Vercel are linked afterwards (checklist item 1 postponed). Until then Postgres 17 runs locally (Homebrew `postgresql@17`, databases `ai_build_log` for dev and `ai_build_log_test` for tests, connection strings in `.env.local` / `.env.test`). `src/db/client.ts` picks the driver from the URL: `*.neon.tech` uses the Neon serverless driver, anything else uses `pg`, so nothing changes when Neon is linked.
+- 2026-10-14 (v0.3): "Already added" detection compares against every step in the project including soft-deleted ones, so re-pasting my whole running notes doesn't bring back a step I deleted (restore it from "Recently deleted" instead). Steps with identical title and numbers within one paste count once.
+- 2026-10-14 (v0.3): Costs are stored with 4 decimals (`numeric(12,4)`); more decimals in a paste are rounded. Writes are validated by Zod on the server (`src/lib/schemas.ts`): paste ≤ 100,000 characters, title ≤ 300, notes ≤ 2,000, ≤ 10 model lines per step.
 - 2026-10-14 (v0.3): The scaffold's `cacheComponents` / `partialPrefetching` flags are off: pages read the database on every request (dynamic), which is what this app wants. Radix primitives (`radix-ui`) are used directly with our tokens instead of the shadcn CLI, to avoid the default shadcn look.
 
 ## Project details

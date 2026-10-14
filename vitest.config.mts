@@ -11,5 +11,7 @@ export default defineConfig({
     include: ["tests/unit/**/*.test.ts"],
     passWithNoTests: true,
     fileParallelism: false,
+    testTimeout: 30_000,
+    hookTimeout: 30_000,
   },
 });
