@@ -266,7 +266,7 @@ tests/            unit/*.test.ts, e2e/smoke.spec.ts, e2e/paste.spec.ts
 ### 2.8 Build (one model, one go)
 Built in one session by **Sonnet 5.5 High** (owner's choice). Order, committing and pushing after each item:
 
-- [ ] 1. (Postponed: built locally first, owner links these later.) Connect GitHub (repo URL from me), Neon (`production` + `test` branch, `! neon login`), Vercel (`! vercel login`, link, env vars)
+- [x] 1. (Done 2026-10-14, except the Neon `test` branch: tests still use local Postgres.) Connect GitHub (repo URL from me), Neon (`production` + `test` branch, `! neon login`), Vercel (`! vercel login`, link, env vars)
 - [x] 2. Scaffold Next.js + Tailwind + shadcn + Drizzle + Vitest + Playwright, with npm scripts `typecheck`, `lint`, `build`, `test`, `test:e2e`, `db:generate`, `db:migrate:test`, `db:migrate`, `db:seed`, `calibrate`
 - [x] 3. Schema + first migration (local `test` and local dev DB; Neon `production` still waits for my approval)
 - [x] 4. `parse-notes.ts` with unit tests covering **every line of both seed files** (21 steps, phases, "Phase 0", multi-model step, missing cost, one-line titles with commas and "…", durations, lowercase effort)
@@ -277,7 +277,7 @@ Built in one session by **Sonnet 5.5 High** (owner's choice). Order, committing 
 - [x] 9. Project page `/p/[slug]` incl. stats per model and cost bars
 - [x] 10. Paste panel, edit step, project settings, new project, undo / recently deleted
 - [x] 11. Playwright: smoke (home + project page read the DB) and paste flow (paste the DEUS notes into an empty project → 7 steps; re-paste → 0 added, 7 "already added"); screenshots at 390 and 1280, light and dark, checked by eye
-- [ ] 12. Deploy check: live URL loads, Vercel spend limit set, Neon usage limit set
+- [ ] 12. Deploy check: live URL loads (done 2026-10-14), Vercel spend limit set, Neon usage limit set
 - **Done when:** the live site shows both projects with correct totals and per-model stats matching a hand check of the seed files, and I can add a new step from my phone by pasting one line.
 
 ### 2.9 Running the live app
@@ -312,6 +312,7 @@ Built in one session by **Sonnet 5.5 High** (owner's choice). Order, committing 
 - 2026-10-14 (v0.3): e2e tests run their own server on port 3187 (not 3100: other projects on this machine use it) against the test database, and start from a reset + seeded test DB (`tests/e2e/global-setup.ts`). Unit tests and e2e both empty the test DB, so run them one after the other, never together.
 - 2026-10-14 (v0.3): "Already added" also matches a step's original pasted text (`source_text`), not only its stored fingerprint, so a step edited after adding is still recognised when the whole running notes are re-pasted. A model line may hold several `claude-…:` models (each followed by its own numbers). One step that breaks a field limit is skipped with a warning and never blocks the rest of a paste. New project creates the project and its steps in one transaction. Preview edits are kept per step (by its original fingerprint) while more text is pasted.
 - 2026-10-14 (v0.3): Known gaps from the end-of-build review, not fixed yet: simultaneous pastes from two tabs can insert duplicates (no row lock); moving a step across a phase boundary splits the phase heading; a usage with an unknown model and no cost is left out of totals without a marker; token kinds missing from a model line are stored as 0 (conflicts with "missing shows —"); `1.2.3k`, `3m 56.4s` and `350ms` are misread without a warning; non-UUID ids in a hand-made request give a 500; `formatTokens(999_950)` shows "1000.0k"; the project page reads the whole `step_usages` table.
+- 2026-10-14 (v0.3): Live on Vercel. The Vercel project's Framework Preset had to be set to Next.js by hand (it was imported while the repo was empty). The database client connects on first query, so builds don't need `DATABASE_URL`. The team is on Hobby, whose 100 deployments/day are shared by all my projects; a push can come back "rate limited" and needs a redeploy later.
 - 2026-10-14 (v0.3): The scaffold's `cacheComponents` / `partialPrefetching` flags are off: pages read the database on every request (dynamic), which is what this app wants. Radix primitives (`radix-ui`) are used directly with our tokens instead of the shadcn CLI, to avoid the default shadcn look.
 
 ## Project details
@@ -321,5 +322,5 @@ Built in one session by **Sonnet 5.5 High** (owner's choice). Order, committing 
 | Folder | `~/projects/projects-steps-documentation` |
 | GitHub repo | https://github.com/gregorykurnia/projects-steps-documentation |
 | Neon project ID | (not known yet; endpoint `ep-silent-queen-b3yeost6`, region `ap-southeast-1`, database `neondb`) |
-| Vercel project | (pending) |
-| Live URL | (pending) |
+| Vercel project | `projects-steps-documentation` (team `gregorykurnia-8729s-projects`, Hobby) |
+| Live URL | https://projects-steps-documentation.vercel.app |
