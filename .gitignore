@@ -7,3 +7,7 @@ screenshots/
 test-results/
 playwright-report/
 .DS_Store
+/coverage
+*.tsbuildinfo
+next-env.d.ts
+.data/

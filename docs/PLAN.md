@@ -1,6 +1,6 @@
 # AI Build Log: Plan
 
-**Status:** Draft v0.2 (2026-10-14). v0.2: per-model stats, paste-anything bulk entry, no login (fully public), estimated costs, Sonnet 5.5 High builds, second project (DEUS HCS Website) added to the seed data.
+**Status:** v0.3 (2026-10-14), build in progress (see §2.8). v0.2 (2026-10-14): v0.2: per-model stats, paste-anything bulk entry, no login (fully public), estimated costs, Sonnet 5.5 High builds, second project (DEUS HCS Website) added to the seed data.
 
 This is a light version of the new-app playbook: one plan instead of separate product, design and implementation documents, no design directions, and the whole build done in one go by one model.
 
@@ -263,9 +263,9 @@ tests/            unit/*.test.ts, e2e/smoke.spec.ts, e2e/paste.spec.ts
 ### 2.8 Build (one model, one go)
 Built in one session by **Sonnet 5.5 High** (owner's choice). Order, committing and pushing after each item:
 
-- [ ] 1. Connect GitHub (repo URL from me), Neon (`production` + `test` branch, `! neon login`), Vercel (`! vercel login`, link, env vars)
-- [ ] 2. Scaffold Next.js + Tailwind + shadcn + Drizzle + Vitest + Playwright, with npm scripts `typecheck`, `lint`, `build`, `test`, `test:e2e`, `db:generate`, `db:migrate:test`, `db:migrate`, `db:seed`, `calibrate`
-- [ ] 3. Schema + first migration (`test`, then `production` with my approval)
+- [ ] 1. (Postponed: built locally first, owner links these later.) Connect GitHub (repo URL from me), Neon (`production` + `test` branch, `! neon login`), Vercel (`! vercel login`, link, env vars)
+- [x] 2. Scaffold Next.js + Tailwind + shadcn + Drizzle + Vitest + Playwright, with npm scripts `typecheck`, `lint`, `build`, `test`, `test:e2e`, `db:generate`, `db:migrate:test`, `db:migrate`, `db:seed`, `calibrate`
+- [x] 3. Schema + first migration (local `test` and local dev DB; Neon `production` still waits for my approval)
 - [ ] 4. `parse-notes.ts` with unit tests covering **every line of both seed files** (21 steps, phases, "Phase 0", multi-model step, missing cost, one-line titles with commas and "…", durations, lowercase effort)
 - [ ] 5. `pricing.ts` + `calibrate-pricing.ts` (Haiku cache-read price checked against Anthropic's pricing page), `stats.ts`, `format.ts`, with unit tests
 - [ ] 6. Server Actions (add steps with duplicate skipping, edit, reorder, soft delete, restore, projects) + seed script; seeded on `test` (and `production` with my OK)
@@ -302,6 +302,8 @@ Built in one session by **Sonnet 5.5 High** (owner's choice). Order, committing 
 - 2026-10-14 (v0.2): Missing costs are estimated from Anthropic prices, calibrated on my recorded costs, always labelled "est.".
 - 2026-10-14 (v0.2): Stats per model (and model + effort) on every project and across all projects.
 - 2026-10-14 (v0.2): Build model is Sonnet 5.5 High (owner's choice).
+- 2026-10-14 (v0.3): Build locally first; GitHub, Neon and Vercel are linked afterwards (checklist item 1 postponed). Until then Postgres 17 runs locally (Homebrew `postgresql@17`, databases `ai_build_log` for dev and `ai_build_log_test` for tests, connection strings in `.env.local` / `.env.test`). `src/db/client.ts` picks the driver from the URL: `*.neon.tech` uses the Neon serverless driver, anything else uses `pg`, so nothing changes when Neon is linked.
+- 2026-10-14 (v0.3): The scaffold's `cacheComponents` / `partialPrefetching` flags are off: pages read the database on every request (dynamic), which is what this app wants. Radix primitives (`radix-ui`) are used directly with our tokens instead of the shadcn CLI, to avoid the default shadcn look.
 
 ## Project details
 | | |
