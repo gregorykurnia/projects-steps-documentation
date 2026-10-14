@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, gt, isNotNull, isNull, sql } from "drizzle-orm";
 import { db } from "./client";
 import { projects, stepUsages, steps, type Project, type Step } from "./schema";
+import { knownFingerprints } from "@/lib/fingerprint";
 import { statsByModel, type UsageRow } from "@/lib/stats";
 
 export const RECENTLY_DELETED_DAYS = 30;
@@ -91,9 +92,13 @@ export async function listRecentlyDeletedProjects(): Promise<Project[]> {
     .orderBy(desc(projects.deletedAt));
 }
 
-/** Fingerprints of every step in the project, deleted or not, for "already added" detection. */
+/** Fingerprints of every step in the project, deleted or not (also of each step's original text), for "already added" detection. */
 export async function existingFingerprints(projectId: string): Promise<string[]> {
-  return (await db.select({ f: steps.fingerprint }).from(steps).where(eq(steps.projectId, projectId))).map((r) => r.f);
+  const rows = await db
+    .select({ fingerprint: steps.fingerprint, sourceText: steps.sourceText })
+    .from(steps)
+    .where(eq(steps.projectId, projectId));
+  return [...knownFingerprints(rows)];
 }
 
 export type ProjectUsageRow = UsageRow & { projectId: string };

@@ -35,9 +35,13 @@ export const stepFieldsSchema = z.object({
 export type StepFields = z.infer<typeof stepFieldsSchema>;
 export type StepFieldsInput = z.input<typeof stepFieldsSchema>;
 
-/** Edits made in the paste preview, keyed by the step's index in the parsed paste. */
-export const pasteEditsSchema = z.record(z.string().regex(/^\d{1,4}$/), stepFieldsSchema.partial());
-export type PasteEdits = z.input<typeof pasteEditsSchema>;
+/**
+ * Edits made in the paste preview, keyed by the step's index in the parsed paste. Only the shape is
+ * checked here; each merged step is validated against stepFieldsSchema, so one bad edit skips that
+ * step instead of rejecting the whole paste.
+ */
+export const pasteEditsSchema = z.record(z.string().regex(/^\d{1,4}$/), z.record(z.string(), z.unknown()));
+export type PasteEdits = Record<string, Partial<StepFieldsInput>>;
 
 export const pasteTextSchema = z.string().max(MAX_PASTE_CHARS);
 

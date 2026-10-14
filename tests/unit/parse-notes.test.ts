@@ -202,4 +202,25 @@ describe("parseNotes edge cases", () => {
     const [s] = parseNotes("Title\nclaude-opus-5-5: 1 input\nclaude-haiku-5-5: 2 input").steps;
     expect(s.sourceText).toBe("Title\nclaude-opus-5-5: 1 input\nclaude-haiku-5-5: 2 input");
   });
+
+  it("takes the model that is followed by token counts, not an earlier word that looks like one", () => {
+    const [s] = parseNotes("Fix claude-md: Claude-opus-5-5 High: 1k input, 2k output ($0.10)").steps;
+    expect(s.title).toBe("Fix claude-md");
+    expect(s.usages).toEqual([
+      { model: "claude-opus-5-5", effort: "high", inputTokens: 1000, outputTokens: 2000, cacheRead: 0, cacheWrite: 0, costUsd: 0.1 },
+    ]);
+  });
+
+  it("reads two models on one line as two usages, each with its own numbers and cost", () => {
+    const r = parseNotes(
+      "Step A: claude-opus-5-5 High: 1k input, 2k output ($0.10), claude-haiku-5-5: 3k input, 4k output ($0.02). Total duration (API): 10s",
+    );
+    expect(r.warnings).toEqual([]);
+    const [s] = r.steps;
+    expect(s.usages.map((u) => [u.model, u.effort, u.inputTokens, u.outputTokens, u.costUsd])).toEqual([
+      ["claude-opus-5-5", "high", 1000, 2000, 0.1],
+      ["claude-haiku-5-5", null, 3000, 4000, 0.02],
+    ]);
+    expect(s.apiDurationS).toBe(10);
+  });
 });

@@ -127,3 +127,39 @@ test("delete a project, undo, and see it on the home page", async ({ page }) => 
   await page.getByRole("button", { name: "Undo" }).click();
   await expect(page.getByRole("link", { name: /Name From Notes/ })).toBeVisible();
 });
+
+test("preview edits survive more typing, and an edited step is not added twice on a re-paste", async ({ page }) => {
+  await page.goto("/new");
+  await page.getByLabel("Name", { exact: true }).fill("Edit Keep");
+  await page.getByRole("button", { name: "Create project" }).click();
+  await expect(page).toHaveURL(/\/p\/edit-keep$/);
+
+  const first = "Typo Titel: claude-sonnet-5-5 High: 5 input, 6 output";
+  const box = await openPaste(page);
+  await box.fill(first);
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  await page.getByLabel("Title").fill("Typo Title");
+  // More notes pasted below: the edit made above must stay.
+  await box.fill(`${first}\nSecond: claude-haiku-5-5: 1 input, 2 output`);
+  await expect(page.getByText("2 steps understood")).toBeVisible();
+  await expect(page.getByText("Typo Title", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Add 2 steps" }).click();
+  await expect(page.getByText("Added 2 steps", { exact: true })).toBeVisible();
+  await expect(page.locator("[data-step-id]")).toHaveCount(2);
+
+  // Re-paste the original, unedited notes: the corrected step is recognised, not added again.
+  const again = await openPaste(page);
+  await again.fill(`${first}\nSecond: claude-haiku-5-5: 1 input, 2 output`);
+  await expect(page.getByText(/2 already added/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Nothing new to add" })).toBeDisabled();
+});
+
+test("one step that can't be saved doesn't stop the rest of the paste", async ({ page }) => {
+  await page.goto("/p/edit-keep");
+  const box = await openPaste(page);
+  await box.fill(`${"x".repeat(301)}: claude-opus-5-5: 1 input\nFine Step: claude-opus-5-5: 2 input`);
+  await expect(page.getByRole("alert").filter({ hasText: /title/i })).toBeVisible();
+  await page.getByRole("button", { name: "Add 1 step" }).click();
+  await expect(page.getByText("Added 1 step", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Fine Step" })).toBeVisible();
+});

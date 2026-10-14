@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createProjectAction } from "@/actions/projects";
-import { MAX_PASTE_CHARS } from "@/lib/schemas";
+import { MAX_PASTE_CHARS, type PasteEdits } from "@/lib/schemas";
 import { formToFields, type StepForm } from "@/lib/step-form";
 import { PastePreview } from "./paste/PastePreview";
 import { usePaste } from "./paste/usePaste";
@@ -19,22 +19,23 @@ export function NewProjectForm() {
   const [nameTouched, setNameTouched] = useState(false);
   const [description, setDescription] = useState("");
   const [text, setText] = useState("");
-  const [edits, setEdits] = useState<Record<number, StepForm>>({});
+  const [edits, setEdits] = useState<Record<string, StepForm>>({});
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const { parsed, items, toAdd, blocked, alreadyCount } = usePaste(text, NO_FINGERPRINTS, edits);
+  const { parsed, items, toAdd, alreadyCount } = usePaste(text, NO_FINGERPRINTS, edits);
   const suggested = parsed.projectName ?? "";
   const shownName = nameTouched ? name : suggested || name;
 
   function create() {
+    if (pending || text.length > MAX_PASTE_CHARS) return;
     if (!shownName.trim()) return setError("Give the project a name");
-    if (blocked) return setError("Fix the highlighted steps first");
     setError(null);
-    const payload: Record<string, NonNullable<ReturnType<typeof okFields>>> = {};
-    for (const [i, form] of Object.entries(edits)) {
-      const f = okFields(form);
-      if (f) payload[i] = f;
+    const payload: PasteEdits = {};
+    for (const item of items) {
+      const form = edits[item.baseFp];
+      const r = form ? formToFields(form) : null;
+      if (r?.ok) payload[String(item.index)] = r.value;
     }
     startTransition(async () => {
       try {
@@ -67,10 +68,7 @@ export function NewProjectForm() {
         <Textarea
           rows={8}
           value={text}
-          onChange={(e) => {
-            setText(e.target.value);
-            setEdits({});
-          }}
+          onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {
             if ((e.metaKey || e.ctrlKey) && e.key === "Enter") create();
           }}
@@ -89,11 +87,11 @@ export function NewProjectForm() {
         edits={edits}
         alreadyCount={alreadyCount}
         newCount={toAdd.length}
-        onEdit={(i, form) =>
+        onEdit={(key, form) =>
           setEdits((prev) => {
             const next = { ...prev };
-            if (form) next[i] = form;
-            else delete next[i];
+            if (form) next[key] = form;
+            else delete next[key];
             return next;
           })
         }
@@ -113,9 +111,4 @@ export function NewProjectForm() {
       </div>
     </div>
   );
-}
-
-function okFields(form: StepForm) {
-  const r = formToFields(form);
-  return r.ok ? r.value : null;
 }

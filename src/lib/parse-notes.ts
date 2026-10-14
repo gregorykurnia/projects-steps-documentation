@@ -70,18 +70,18 @@ function sentenceCase(s: string): string {
 
 type ModelLine = {
   titlePrefix: string;
-  usage: ParsedUsage;
+  usages: ParsedUsage[];
   api: number | null;
   wall: number | null;
 };
 
-function parseModelLine(line: string): ModelLine | null {
-  const m = MODEL_RE.exec(line);
-  if (!m) return null;
-  const rest = line.slice(m.index + m[0].length);
+const MODEL_GLOBAL = new RegExp(MODEL_RE.source, "gi");
+
+/** One model's numbers: the text between its `claude-…:` and the next one (or the end of the line). */
+function readSegment(model: string, effort: Effort | null, text: string): ParsedUsage | null {
   const usage: ParsedUsage = {
-    model: m[1].toLowerCase(),
-    effort: m[2] ? (m[2].toLowerCase() as Effort) : null,
+    model,
+    effort,
     inputTokens: 0,
     outputTokens: 0,
     cacheRead: 0,
@@ -89,7 +89,7 @@ function parseModelLine(line: string): ModelLine | null {
     costUsd: null,
   };
   let found = false;
-  for (const t of rest.matchAll(TOKENS_RE)) {
+  for (const t of text.matchAll(TOKENS_RE)) {
     found = true;
     const kind = t[3].toLowerCase().replace(/\s+/, " ");
     const value = toTokens(t[1], t[2]);
@@ -99,10 +99,31 @@ function parseModelLine(line: string): ModelLine | null {
     else usage.cacheWrite = value;
   }
   if (!found) return null;
-  const cost = COST_RE.exec(rest);
+  const cost = COST_RE.exec(text);
   if (cost) usage.costUsd = parseFloat(cost[1].replace(/,/g, ""));
-  const { api, wall } = parseDurations(rest);
-  return { titlePrefix: stripColon(line.slice(0, m.index)), usage, api, wall };
+  return usage;
+}
+
+/**
+ * A line can hold several models ("claude-opus-5-5 High: … , claude-haiku-5-5: …"). Only a
+ * `claude-…:` that is followed by token counts counts as a model, so a title like "Fix claude-md:"
+ * stays part of the title.
+ */
+function parseModelLine(line: string): ModelLine | null {
+  const matches = [...line.matchAll(MODEL_GLOBAL)];
+  const usages: ParsedUsage[] = [];
+  let firstIndex = -1;
+  matches.forEach((m, i) => {
+    const start = m.index + m[0].length;
+    const end = matches[i + 1]?.index ?? line.length;
+    const usage = readSegment(m[1].toLowerCase(), m[2] ? (m[2].toLowerCase() as Effort) : null, line.slice(start, end));
+    if (!usage) return;
+    if (firstIndex < 0) firstIndex = m.index;
+    usages.push(usage);
+  });
+  if (!usages.length) return null;
+  const { api, wall } = parseDurations(line);
+  return { titlePrefix: stripColon(line.slice(0, firstIndex)), usages, api, wall };
 }
 
 /** Turns pasted notes into steps. Pure: no I/O, safe to run in the browser. */
@@ -138,7 +159,7 @@ export function parseNotes(text: string): ParseResult {
           title: model.titlePrefix,
           phase,
           subGroup,
-          usages: [model.usage],
+          usages: model.usages,
           apiDurationS: model.api,
           wallDurationS: model.wall,
           sourceText: line,
@@ -150,7 +171,7 @@ export function parseNotes(text: string): ParseResult {
           title: pending.title,
           phase,
           subGroup,
-          usages: [model.usage],
+          usages: model.usages,
           apiDurationS: model.api,
           wallDurationS: model.wall,
           sourceText: `${pending.raw}\n${line}`,
@@ -159,7 +180,7 @@ export function parseNotes(text: string): ParseResult {
         steps.push(current);
         pending = null;
       } else if (current) {
-        current.usages.push(model.usage);
+        current.usages.push(...model.usages);
         current.sourceText += `\n${line}`;
         if (model.api !== null) current.apiDurationS = model.api;
         if (model.wall !== null) current.wallDurationS = model.wall;

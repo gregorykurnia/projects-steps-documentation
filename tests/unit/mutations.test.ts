@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   addSteps,
   createProject,
+  createProjectWithSteps,
   deleteProject,
   deleteStep,
   moveStep,
@@ -13,6 +14,7 @@ import {
   updateStep,
 } from "@/db/mutations";
 import { getProjectBySlug, getProjectSteps, listProjects, listRecentlyDeletedSteps, usageRows } from "@/db/queries";
+import type { Effort } from "@/lib/parse-notes";
 import { statsByModel } from "@/lib/stats";
 import { MAX_PASTE_CHARS } from "@/lib/schemas";
 import { resetTestDb } from "./helpers/db";
@@ -106,16 +108,78 @@ describe("addSteps", () => {
     await expect(addSteps(p.id, "x".repeat(MAX_PASTE_CHARS + 1))).rejects.toThrow();
   });
 
-  it("rejects an edit that breaks a field limit and saves nothing", async () => {
+  it("skips a step whose edit breaks a field limit, with a warning, and adds the rest", async () => {
     const p = await createProject({ name: "X" });
-    await expect(addSteps(p.id, DEUS, { "2": { title: "t".repeat(301) } })).rejects.toThrow();
-    expect(await getProjectSteps(p.id)).toHaveLength(0);
+    const r = await addSteps(p.id, DEUS, { "2": { title: "t".repeat(301) } });
+    expect(r.added).toHaveLength(6);
+    expect(r.warnings).toHaveLength(1);
+    expect(await getProjectSteps(p.id)).toHaveLength(6);
   });
 
   it("refuses a deleted or unknown project", async () => {
     const p = await createProject({ name: "X" });
     await deleteProject(p.id);
     await expect(addSteps(p.id, DEUS)).rejects.toThrow("Project not found");
+  });
+});
+
+describe("re-pasting after edits", () => {
+  it("does not add a step again after its title was edited on the edit page", async () => {
+    const p = await createProject({ name: "DEUS" });
+    const { added } = await addSteps(p.id, DEUS);
+    const [first] = await getProjectSteps(p.id);
+    await updateStep(added[0], {
+      title: "Overall Plan, fixed typo",
+      phase: first.phase,
+      subGroup: first.subGroup,
+      notes: null,
+      apiDurationS: first.apiDurationS,
+      wallDurationS: first.wallDurationS,
+      usages: first.usages.map((u) => ({ ...u, effort: u.effort as Effort | null })),
+    });
+    const again = await addSteps(p.id, DEUS);
+    expect(again.added).toEqual([]);
+    expect(again.skipped).toBe(7);
+  });
+
+  it("does not add a step again after it was edited in the paste preview", async () => {
+    const p = await createProject({ name: "DEUS" });
+    await addSteps(p.id, DEUS, { "0": { title: "Renamed in preview" } });
+    const again = await addSteps(p.id, DEUS);
+    expect(again.added).toEqual([]);
+    expect(again.skipped).toBe(7);
+  });
+});
+
+describe("steps that can't be saved", () => {
+  it("skips an over-limit step with a warning and still adds the others", async () => {
+    const p = await createProject({ name: "X" });
+    const text = `${"t".repeat(301)}: claude-opus-5-5: 1 input\nGood: claude-opus-5-5: 2 input`;
+    const r = await addSteps(p.id, text);
+    expect(r.added).toHaveLength(1);
+    expect(r.warnings).toHaveLength(1);
+    expect(r.warnings[0]).toMatchObject({ line: 1 });
+    expect((await getProjectSteps(p.id)).map((s) => s.title)).toEqual(["Good"]);
+  });
+});
+
+describe("createProjectWithSteps", () => {
+  it("creates the project and its steps together", async () => {
+    const r = await createProjectWithSteps({ name: "Together" }, DEUS);
+    expect(r.project.slug).toBe("together");
+    expect(r.added).toHaveLength(7);
+    expect(await getProjectSteps(r.project.id)).toHaveLength(7);
+  });
+
+  it("creates no project at all when the paste is rejected", async () => {
+    await expect(createProjectWithSteps({ name: "Nope" }, "x".repeat(MAX_PASTE_CHARS + 1))).rejects.toThrow();
+    expect(await listProjects()).toEqual([]);
+  });
+
+  it("works with no paste", async () => {
+    const r = await createProjectWithSteps({ name: "Empty" }, "");
+    expect(r.added).toEqual([]);
+    expect((await listProjects()).map((p) => p.slug)).toEqual(["empty"]);
   });
 });
 

@@ -2,7 +2,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { db } from "./client";
 import { projects, stepUsages, steps } from "./schema";
 import { parseNotes, type ParseWarning } from "@/lib/parse-notes";
-import { stepFingerprint } from "@/lib/fingerprint";
+import { knownFingerprints, stepFingerprint } from "@/lib/fingerprint";
 import { slugify } from "@/lib/slug";
 import {
   pasteEditsSchema,
@@ -98,55 +98,89 @@ export type AddStepsResult = {
   warnings: ParseWarning[];
 };
 
+const issueText = (issue: { path: PropertyKey[]; message: string }) =>
+  `${issue.path.map(String).join(" ")}: ${issue.message}`.replace(/^: /, "");
+
+/** The shared body of addSteps and createProjectWithSteps; runs inside the caller's transaction. */
+async function addStepsInTx(tx: Tx, projectId: string, text: string, edits: PasteEdits): Promise<AddStepsResult> {
+  const parsed = parseNotes(text);
+  const existing = knownFingerprints(
+    await tx
+      .select({ fingerprint: steps.fingerprint, sourceText: steps.sourceText })
+      .from(steps)
+      .where(eq(steps.projectId, projectId)),
+  );
+  const [{ max }] = await tx
+    .select({ max: sql<number>`coalesce(max(${steps.position}), 0)` })
+    .from(steps)
+    .where(eq(steps.projectId, projectId));
+
+  let position = Number(max);
+  let skipped = 0;
+  const added: string[] = [];
+  const warnings = [...parsed.warnings];
+  for (const [i, p] of parsed.steps.entries()) {
+    const checked = stepFieldsSchema.safeParse({
+      title: p.title,
+      phase: p.phase,
+      subGroup: p.subGroup,
+      notes: null,
+      apiDurationS: p.apiDurationS,
+      wallDurationS: p.wallDurationS,
+      usages: p.usages,
+      ...edits[String(i)],
+    });
+    if (!checked.success) {
+      // One step that can't be saved never blocks the rest of the paste.
+      warnings.push({ line: p.line, message: `“${p.title}” can't be saved (${issueText(checked.error.issues[0])})` });
+      continue;
+    }
+    const f = checked.data;
+    const fingerprint = stepFingerprint(f.title, f.usages);
+    if (existing.has(fingerprint)) {
+      skipped++;
+      continue;
+    }
+    existing.add(fingerprint);
+    added.push(await insertStep(tx, projectId, ++position, f, p.sourceText));
+  }
+  if (added.length) await touchProject(tx, projectId);
+  return { added, skipped, warnings: warnings.sort((a, b) => a.line - b.line) };
+}
+
 /**
  * Adds the steps in a paste to a project. The server re-parses the text itself; `edits` are the
- * browser's per-step overrides, keyed by the step's index in the parse. Steps whose fingerprint
- * (title + usage numbers) is already in the project, deleted or not, are skipped.
+ * browser's per-step overrides, keyed by the step's index in the parse. Steps already in the
+ * project (deleted or not, and also judged by their original pasted text) are skipped.
  */
 export async function addSteps(projectId: string, text: string, edits: PasteEdits = {}): Promise<AddStepsResult> {
   pasteTextSchema.parse(text);
   const parsedEdits = pasteEditsSchema.parse(edits);
-  const parsed = parseNotes(text);
-
   return db.transaction(async (tx) => {
     const [project] = await tx
       .select({ id: projects.id })
       .from(projects)
       .where(and(eq(projects.id, projectId), sql`${projects.deletedAt} is null`));
     if (!project) throw new Error("Project not found");
+    return addStepsInTx(tx, projectId, text, parsedEdits);
+  });
+}
 
-    const existing = new Set(
-      (await tx.select({ f: steps.fingerprint }).from(steps).where(eq(steps.projectId, projectId))).map((r) => r.f),
-    );
-    const [{ max }] = await tx
-      .select({ max: sql<number>`coalesce(max(${steps.position}), 0)` })
-      .from(steps)
-      .where(eq(steps.projectId, projectId));
-
-    let position = Number(max);
-    let skipped = 0;
-    const added: string[] = [];
-    for (const [i, p] of parsed.steps.entries()) {
-      const f = stepFieldsSchema.parse({
-        title: p.title,
-        phase: p.phase,
-        subGroup: p.subGroup,
-        notes: null,
-        apiDurationS: p.apiDurationS,
-        wallDurationS: p.wallDurationS,
-        usages: p.usages,
-        ...parsedEdits[String(i)],
-      });
-      const fingerprint = stepFingerprint(f.title, f.usages);
-      if (existing.has(fingerprint)) {
-        skipped++;
-        continue;
-      }
-      existing.add(fingerprint);
-      added.push(await insertStep(tx, projectId, ++position, f, p.sourceText));
-    }
-    if (added.length) await touchProject(tx, projectId);
-    return { added, skipped, warnings: parsed.warnings };
+/** Creates a project and adds its pasted steps in one transaction: all of it or none of it. */
+export async function createProjectWithSteps(input: ProjectFieldsInput, text = "", edits: PasteEdits = {}) {
+  const f = projectFieldsSchema.parse(input);
+  pasteTextSchema.parse(text);
+  const parsedEdits = pasteEditsSchema.parse(edits);
+  return db.transaction(async (tx) => {
+    const slug = await uniqueSlug(tx, f.name);
+    const [project] = await tx
+      .insert(projects)
+      .values({ slug, name: f.name, description: f.description, status: f.status })
+      .returning();
+    const result: AddStepsResult = text.trim()
+      ? await addStepsInTx(tx, project.id, text, parsedEdits)
+      : { added: [], skipped: 0, warnings: [] };
+    return { project, ...result };
   });
 }
 

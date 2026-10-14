@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { addSteps, createProject, deleteProject, restoreProject, updateProject } from "@/db/mutations";
+import { createProjectWithSteps, deleteProject, restoreProject, updateProject } from "@/db/mutations";
 import type { PasteEdits, ProjectFieldsInput } from "@/lib/schemas";
 
 function refresh() {
@@ -11,10 +11,9 @@ function refresh() {
 
 /** Creates a project, and adds the steps in `text` if any were pasted. */
 export async function createProjectAction(input: ProjectFieldsInput, text = "", edits: PasteEdits = {}) {
-  const project = await createProject(input);
-  const result = text.trim() ? await addSteps(project.id, text, edits) : null;
+  const result = await createProjectWithSteps(input, text, edits);
   refresh();
-  return { slug: project.slug, added: result?.added.length ?? 0, warnings: result?.warnings ?? [] };
+  return { slug: result.project.slug, added: result.added.length, warnings: result.warnings };
 }
 
 export async function updateProjectAction(projectId: string, input: ProjectFieldsInput) {

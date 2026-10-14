@@ -1,4 +1,4 @@
-import type { ParsedUsage } from "./parse-notes";
+import { parseNotes, type ParsedUsage } from "./parse-notes";
 
 /** cyrb53: small synchronous string hash, runs the same in the browser and on the server. */
 function hash(str: string): string {
@@ -28,4 +28,24 @@ export function stepFingerprint(title: string, usages: UsageNumbers[]): string {
     [u.model, u.effort ?? "", u.inputTokens, u.outputTokens, u.cacheRead, u.cacheWrite].join(","),
   );
   return hash([normaliseTitle(title), ...parts].join("|"));
+}
+
+/**
+ * Fingerprints of the steps found in a step's original pasted lines. A step edited after it was
+ * added no longer matches its own stored fingerprint, but still matches these, so re-pasting the
+ * whole running document doesn't add it a second time.
+ */
+export function sourceFingerprints(sourceText: string | null): string[] {
+  if (!sourceText) return [];
+  return parseNotes(sourceText).steps.map((s) => stepFingerprint(s.title, s.usages));
+}
+
+/** Everything a project already knows about: stored fingerprints plus those of the original text. */
+export function knownFingerprints(rows: { fingerprint: string; sourceText: string | null }[]): Set<string> {
+  const known = new Set<string>();
+  for (const r of rows) {
+    known.add(r.fingerprint);
+    for (const f of sourceFingerprints(r.sourceText)) known.add(f);
+  }
+  return known;
 }

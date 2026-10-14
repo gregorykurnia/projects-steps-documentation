@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { ClipboardPaste } from "lucide-react";
 import { toast } from "sonner";
 import { addStepsAction } from "@/actions/steps";
-import { MAX_PASTE_CHARS } from "@/lib/schemas";
+import { MAX_PASTE_CHARS, type PasteEdits } from "@/lib/schemas";
 import { formToFields, type StepForm } from "@/lib/step-form";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/input";
@@ -33,17 +33,22 @@ function flashSteps(ids: string[]) {
 export function PasteSteps({ projectId, fingerprints }: { projectId: string; fingerprints: string[] }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
-  const [edits, setEdits] = useState<Record<number, StepForm>>({});
+  const [edits, setEdits] = useState<Record<string, StepForm>>({});
   const [pending, startTransition] = useTransition();
   const addRef = useRef<() => void>(() => {});
 
-  const { parsed, items, toAdd, blocked, alreadyCount } = usePaste(text, fingerprints, edits);
-  const canAdd = toAdd.length > 0 && !blocked && !pending && text.length <= MAX_PASTE_CHARS;
+  const { parsed, items, toAdd, alreadyCount } = usePaste(text, fingerprints, edits);
+  const canAdd = toAdd.length > 0 && !pending && text.length <= MAX_PASTE_CHARS;
 
   function add() {
     if (!canAdd) return;
-    const payload: Record<string, ReturnType<typeof stepFields>> = {};
-    for (const [i, form] of Object.entries(edits)) payload[i] = stepFields(form);
+    // The server re-parses the text and wants edits by step index; ours are kept by original fingerprint.
+    const payload: PasteEdits = {};
+    for (const item of items) {
+      const form = edits[item.baseFp];
+      const r = form ? formToFields(form) : null;
+      if (r?.ok) payload[String(item.index)] = r.value;
+    }
     const count = toAdd.length;
     startTransition(async () => {
       try {
@@ -85,10 +90,7 @@ export function PasteSteps({ projectId, fingerprints }: { projectId: string; fin
             autoFocus
             rows={8}
             value={text}
-            onChange={(e) => {
-              setText(e.target.value);
-              setEdits({});
-            }}
+            onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {
               if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
                 e.preventDefault();
@@ -113,11 +115,11 @@ export function PasteSteps({ projectId, fingerprints }: { projectId: string; fin
             edits={edits}
             alreadyCount={alreadyCount}
             newCount={toAdd.length}
-            onEdit={(i, form) =>
+            onEdit={(key, form) =>
               setEdits((prev) => {
                 const next = { ...prev };
-                if (form) next[i] = form;
-                else delete next[i];
+                if (form) next[key] = form;
+                else delete next[key];
                 return next;
               })
             }
@@ -132,11 +134,4 @@ export function PasteSteps({ projectId, fingerprints }: { projectId: string; fin
       </Sheet>
     </>
   );
-}
-
-/** The edited form as the server expects it; invalid forms never reach here (the button is disabled). */
-function stepFields(form: StepForm) {
-  const r = formToFields(form);
-  if (!r.ok) throw new Error(r.error);
-  return r.value;
 }

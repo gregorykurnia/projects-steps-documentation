@@ -124,8 +124,8 @@ export function PastePreview({
 }: {
   items: PreviewItem[];
   warnings: { line: number; message: string }[];
-  edits: Record<number, StepForm>;
-  onEdit: (index: number, form: StepForm | undefined) => void;
+  edits: Record<string, StepForm>;
+  onEdit: (key: string, form: StepForm | undefined) => void;
   alreadyCount: number;
   newCount: number;
 }) {
@@ -151,7 +151,7 @@ export function PastePreview({
       ) : null}
       <ul className="space-y-2">
         {items.map((item) => (
-          <PreviewStep key={item.index} item={item} edit={edits[item.index]} onEdit={(f) => onEdit(item.index, f)} />
+          <PreviewStep key={item.index} item={item} edit={edits[item.baseFp]} onEdit={(f) => onEdit(item.baseFp, f)} />
         ))}
       </ul>
     </div>
