@@ -275,8 +275,8 @@ Built in one session by **Sonnet 5.5 High** (owner's choice). Order, committing 
 - [x] 7. Tokens, AppShell, PageHeader, theme toggle, fonts, favicon, 404/error, `noindex` + `robots.txt`
 - [x] 8. Home page `/`
 - [x] 9. Project page `/p/[slug]` incl. stats per model and cost bars
-- [ ] 10. Paste panel, edit step, project settings, new project, undo / recently deleted
-- [ ] 11. Playwright: smoke (home + project page read the DB) and paste flow (paste the DEUS notes into an empty project → 7 steps; re-paste → 0 added, 7 "already added"); screenshots at 390 and 1280, light and dark, checked by eye
+- [x] 10. Paste panel, edit step, project settings, new project, undo / recently deleted
+- [x] 11. Playwright: smoke (home + project page read the DB) and paste flow (paste the DEUS notes into an empty project → 7 steps; re-paste → 0 added, 7 "already added"); screenshots at 390 and 1280, light and dark, checked by eye
 - [ ] 12. Deploy check: live URL loads, Vercel spend limit set, Neon usage limit set
 - **Done when:** the live site shows both projects with correct totals and per-model stats matching a hand check of the seed files, and I can add a new step from my phone by pasting one line.
 
@@ -309,6 +309,7 @@ Built in one session by **Sonnet 5.5 High** (owner's choice). Order, committing 
 - 2026-10-14 (v0.3): "Already added" detection compares against every step in the project including soft-deleted ones, so re-pasting my whole running notes doesn't bring back a step I deleted (restore it from "Recently deleted" instead). Steps with identical title and numbers within one paste count once.
 - 2026-10-14 (v0.3): Costs are stored with 4 decimals (`numeric(12,4)`); more decimals in a paste are rounded. Writes are validated by Zod on the server (`src/lib/schemas.ts`): paste ≤ 100,000 characters, title ≤ 300, notes ≤ 2,000, ≤ 10 model lines per step.
 - 2026-10-14 (v0.3): GitHub and Neon linked (checklist item 1, partly). `.env.local` now points at Neon `production`; tests stay on the local `ai_build_log_test` database until a Neon `test` branch exists. Vercel not linked yet.
+- 2026-10-14 (v0.3): e2e tests run their own server on port 3187 (not 3100: other projects on this machine use it) against the test database, and start from a reset + seeded test DB (`tests/e2e/global-setup.ts`). Unit tests and e2e both empty the test DB, so run them one after the other, never together.
 - 2026-10-14 (v0.3): The scaffold's `cacheComponents` / `partialPrefetching` flags are off: pages read the database on every request (dynamic), which is what this app wants. Radix primitives (`radix-ui`) are used directly with our tokens instead of the shadcn CLI, to avoid the default shadcn look.
 
 ## Project details

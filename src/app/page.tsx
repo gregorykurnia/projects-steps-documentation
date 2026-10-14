@@ -1,5 +1,5 @@
 import { Plus } from "lucide-react";
-import { listProjects, usageRows } from "@/db/queries";
+import { listProjects, listRecentlyDeletedProjects, usageRows } from "@/db/queries";
 import { statsByModel } from "@/lib/stats";
 import { formatDuration, formatExactTokens, formatTokens } from "@/lib/format";
 import { Cost } from "@/components/Cost";
@@ -7,13 +7,20 @@ import { EstimateNote } from "@/components/EstimateNote";
 import { ModelStatsTable } from "@/components/ModelStatsTable";
 import { PageHeader } from "@/components/PageHeader";
 import { ProjectCard } from "@/components/ProjectCard";
+import { RecentlyDeleted } from "@/components/RecentlyDeleted";
 import { StatTile } from "@/components/StatTile";
 import { LinkButton } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const [projects, rows] = await Promise.all([listProjects(), usageRows()]);
+  const [projects, rows, deletedProjects] = await Promise.all([listProjects(), usageRows(), listRecentlyDeletedProjects()]);
+  const deleted = (
+    <RecentlyDeleted
+      kind="project"
+      items={deletedProjects.map((d) => ({ id: d.id, title: d.name, deletedAt: d.deletedAt!.toISOString() }))}
+    />
+  );
   const byModelEffort = statsByModel(rows, { groupBy: "model+effort" });
   const byModel = statsByModel(rows, { groupBy: "model" });
   const t = byModel.total;
@@ -29,6 +36,7 @@ export default async function Home() {
       <div>
         <PageHeader title="All projects" actions={newProject} />
         <p className="text-sm text-muted">No projects yet. Create one and paste your notes to get started.</p>
+        {deleted}
       </div>
     );
   }
@@ -62,6 +70,8 @@ export default async function Home() {
         <ModelStatsTable title="All projects, by model" byModelEffort={byModelEffort} byModel={byModel} />
         <EstimateNote />
       </section>
+
+      {deleted}
     </div>
   );
 }

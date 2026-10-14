@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getProjectBySlug, getProjectSteps, usageRows } from "@/db/queries";
+import { Settings } from "lucide-react";
+import { existingFingerprints, getProjectBySlug, getProjectSteps, listRecentlyDeletedSteps, usageRows } from "@/db/queries";
 import { statsByModel } from "@/lib/stats";
 import { stepCost } from "@/lib/steps-view";
 import { formatDate, formatDuration, formatExactTokens, formatTokens } from "@/lib/format";
@@ -11,7 +12,11 @@ import { ModelStatsTable } from "@/components/ModelStatsTable";
 import { PageHeader } from "@/components/PageHeader";
 import { StatTile } from "@/components/StatTile";
 import { StatusChip } from "@/components/StatusChip";
+import { PasteSteps } from "@/components/paste/PasteSteps";
+import { RecentlyDeleted } from "@/components/RecentlyDeleted";
 import { StepList } from "@/components/StepList";
+import { StepMenu } from "@/components/StepMenu";
+import { LinkButton } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +39,12 @@ export default async function ProjectPage({ params }: Props) {
   const project = await getProjectBySlug((await params).slug);
   if (!project) notFound();
 
-  const [steps, rows] = await Promise.all([getProjectSteps(project.id), usageRows(project.id)]);
+  const [steps, rows, fingerprints, deleted] = await Promise.all([
+    getProjectSteps(project.id),
+    usageRows(project.id),
+    existingFingerprints(project.id),
+    listRecentlyDeletedSteps(project.id),
+  ]);
   const byModelEffort = statsByModel(rows, { groupBy: "model+effort" });
   const byModel = statsByModel(rows, { groupBy: "model" });
   const t = byModel.total;
@@ -45,7 +55,7 @@ export default async function ProjectPage({ params }: Props) {
   );
 
   return (
-    <div>
+    <div className="pb-20 sm:pb-0">
       <PageHeader
         title={project.name}
         description={project.description}
@@ -53,6 +63,14 @@ export default async function ProjectPage({ params }: Props) {
           <>
             <StatusChip status={project.status} />
             {range ? <span>{range}</span> : null}
+          </>
+        }
+        actions={
+          <>
+            <LinkButton href={`/p/${project.slug}/settings`} variant="ghost" aria-label="Project settings">
+              <Settings className="size-4" aria-hidden /> <span className="hidden sm:inline">Settings</span>
+            </LinkButton>
+            <PasteSteps projectId={project.id} fingerprints={fingerprints} />
           </>
         }
       />
@@ -83,9 +101,19 @@ export default async function ProjectPage({ params }: Props) {
             />
           </section>
 
-          <StepList steps={steps} />
+          <StepList
+            steps={steps}
+            renderMenu={(s, i, count) => (
+              <StepMenu stepId={s.id} slug={project.slug} title={s.title} index={i} count={count} />
+            )}
+          />
         </div>
       )}
+
+      <RecentlyDeleted
+        kind="step"
+        items={deleted.map((d) => ({ id: d.id, title: d.title, deletedAt: d.deletedAt!.toISOString() }))}
+      />
     </div>
   );
 }
