@@ -69,3 +69,9 @@ body {
     background: var(--accent-soft);
   }
 }
+
+/* Estimated cost drawn hatched, recorded cost drawn solid. */
+.bar-est {
+  background-image: repeating-linear-gradient(135deg, var(--accent) 0 3px, transparent 3px 6px);
+  opacity: 0.6;
+}
