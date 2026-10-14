@@ -5,7 +5,8 @@ A small website documenting my AI projects step by step: models used, tokens, co
 ## Non-negotiables
 - Follow `docs/PLAN.md`. Don't add features beyond it without asking; ideas go to me first. When the code needs something the plan doesn't answer, update the plan first.
 - All styling uses the tokens in `src/styles/tokens.css` (from `docs/PLAN.md` §2.6). No raw hex values in components. No default shadcn look.
-- Missing values (cost, durations) show as "—" / "not recorded", never as 0.
+- Missing values show as "—", never as 0. Estimated costs are always labelled "est.", never mixed silently into recorded ones.
+- `docs/seed-data/*.txt` are my real notes, kept verbatim: the parser's tests and the seed both read them. Don't edit them to make a test pass; fix the parser.
 - Tests run against the Neon `test` branch, never `production`.
 - Secrets live in `.env.local` / `.env.test` (gitignored). Never print, commit or copy connection strings or passwords into docs.
 

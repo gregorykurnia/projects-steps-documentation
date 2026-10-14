@@ -1,0 +1,39 @@
+Wedding Plan Redesign:
+Capability Inventory Mapping
+Claude-opus-5-5 Medium:  29.8k input, 78.4k output, 4.7m cache read, 536.3k cache write ($5.68)
+
+Second Leak Review:
+Claude-sonnet-5-5 High:  534 input, 19.5k output, 1.1m cache read, 75.4k cache write ($0.60)
+
+Guess the Layout Test 1:
+Claude-opus-5-5 High:  606 input, 3.6k output, 100.1k cache read, 37.6k cache write
+
+Updating Priorities:
+Claude-opus-5-5 Medium:  520 input, 6.4k output, 385.3k cache read, 42.2k cache write ($0.54)
+
+Inventory Notes:
+claude-haiku-5-5:  1.4k input, 141.3k output, 5.2m cache read, 231.7k cache write ($0.72)
+claude-opus-5-5:  542 input, 11.2k output, 4.7m cache read, 251.2k cache write ($3.17)
+
+Update Design Brief:
+Claude-opus-5-5 Medium:  14 input, 3.4k output, 312.3k cache read, 38.2k cache write ($0.4368)
+
+Design Alternatives Run 1:
+Claude-opus-5-5 High:  554 input, 63.2k output, 1.9m cache read, 94.7k cache write ($2.41)
+
+Expand Design:
+claude-opus-5-5:  3.8k input, 283.9k output, 20.9m cache read, 334.4k cache write ($12.55)
+
+Design Guide:
+Claude-opus-5-5 High:  178 input, 91.0k output, 8.2m cache read, 303.1k cache write ($5.89)
+
+Coverage Audit to All Screens:
+Claude-sonnet-5-5 High:  120 input, 74.8k output, 13.3m cache read, 298.5k cache write ($3.27)
+
+Create Comprehensive Technical Guide:
+Claude-opus-5-5 High:  22.2k input, 156.7k output, 17.0m cache read, 510.5k cache write ($10.21)
+
+IMPLEMENTATION:
+Test Harness, Old UI Smoke Test, Route Groups and Legacy href: claude-sonnet-5-5 High:  56.7k input, 93.6k output, 21.2m cache read, 788.0k cache write ($5.47). Total duration (API):  19m 52s. Total duration (wall): 2h 14m 22s
+Money Model:  Claude-opus-5-5 Medium:  44 input, 26.3k output, 1.7m cache read, 96.9k cache write ($1.65).  Total duration (API):  3m 56s. Total duration (wall): 8m 54s
+Guests, items…, dates, agendas, month…, SUM engine and table sort: Claude-sonnet-5-5 High:  220 input, 159.8k output, 15.0m cache read, 350.1k cache write ($4.50). Total duration (API):  17m 34s. Total duration (wall): 28m 22s

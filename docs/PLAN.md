@@ -1,107 +1,142 @@
 # AI Build Log: Plan
 
-**Status:** Draft v0.1 (2026-10-14). Light version of the new-app playbook: one plan instead of separate product, design and implementation documents, no design directions, and the whole build done in one go by one model.
+**Status:** Draft v0.2 (2026-10-14). v0.2: per-model stats, paste-anything bulk entry, no login (fully public), estimated costs, Sonnet 5.5 High builds, second project (DEUS HCS Website) added to the seed data.
+
+This is a light version of the new-app playbook: one plan instead of separate product, design and implementation documents, no design directions, and the whole build done in one go by one model.
 
 ---
 
 ## Part 1: Product
 
 ### 1.1 What it is
-A small, professional-looking website that documents my AI projects. Each **project** (for example "Wedding Plan Redesign") is a list of **steps** in order. For each step it shows which model(s) ran it, the tokens (input, output, cache read, cache write), the cost, and the time taken when I have it. Each project and the whole site show totals.
+A small, professional-looking website that documents my AI projects. Each **project** (for example "Wedding Plan Redesign", "DEUS HCS Website") is a list of **steps** in order. For each step it shows which model(s) ran it, the tokens (input, output, cache read, cache write), the cost, and the time taken when I have it. Each project shows totals and **stats per model**, and the home page shows the same across all projects.
 
 **Basic principles**
-- **Readers:** anyone with the link can read (public, read-only). Kept out of search engines (`noindex`).
-- **Editor:** only me, behind one admin password.
-- **How data gets in:** I paste the usage text exactly as I write it today (the `/cost`-style lines) and the app parses it. I can correct any parsed field before saving. The existing Wedding Plan Redesign notes are seeded on day one.
+- **Fully public, no login.** Anyone with the link can read *and* add or edit. Kept out of search engines (`noindex`), so in practice only people I send the link to will find it. Deletes can be undone (see 1.3), so a mistake or a stranger can't lose data for good.
+- **How data gets in:** I copy-paste my notes exactly as I write them today, as much or as little as I want at once, and the site turns them into steps automatically. Nothing to fill in by hand unless I want to.
+- **Starting data:** both projects I have so far are loaded on day one from `docs/seed-data/` (Wedding Plan Redesign: 14 steps; DEUS HCS Website: 7 steps).
 
 ### 1.2 Jobs
 
 | Job | How often | Notes |
 |---|---|---|
-| Add a step to a project (paste usage text) | Several times a week | The most frequent job, so it must be the fastest |
-| Look at a project: steps, costs, where the money went | Weekly | The main reading screen |
-| Compare projects: total cost, tokens, time | Occasionally | The home page |
-| Create a project | Rare | |
-| Edit, reorder or delete a step | Rare | |
+| Add steps to a project by pasting my notes | Several times a week | The most frequent job, so it must be the fastest: paste, check, one click |
+| Look at a project: steps, costs, per-model stats, where the money went | Weekly | The main reading screen |
+| Compare projects and models across everything | Occasionally | The home page |
+| Create a project | Rare | Can be done by pasting too |
+| Fix, reorder or delete a step | Rare | |
 
 ### 1.3 Features
 
-**Projects overview (`/`)**
-- A card per project: name, one-line description, status (In progress / Done), number of steps, total cost, total tokens, last updated.
-- A totals strip at the top: all projects' cost, tokens and steps.
-- Empty state (no projects yet): a short line and, when signed in, a "New project" button.
+**Home page (`/`)**
+- A totals strip: total cost (recorded + estimated), total tokens, total steps, total API time / wall time, across all projects.
+- A card per project: name, one-line description, status (In progress / Done), number of steps, total cost, total output tokens, last updated.
+- **All projects, by model:** the same per-model table as on a project page (below), summed across every project.
+- **New project** button. Empty state (no projects yet): one line and the button.
 
 **Project page (`/p/[slug]`)**
-- Header: name, description, status, date range.
-- Summary tiles: total cost, total output tokens, total cache read, total API time / wall time (only when any step has durations), number of steps.
-- **Cost by step:** a simple horizontal bar per step (sorted in step order), so the expensive steps stand out. Steps with no cost recorded are shown as "no cost recorded", not as zero.
-- **Cost by model:** a small breakdown (for example Opus 5.5 High vs Sonnet 5.5 High vs Haiku), with share of cost.
-- **Steps**, grouped by **phase** (for example "Planning & design" and "Implementation"), each step as a row/card:
+- Header: name, description, status, date range, **Paste steps** button (always visible, top right; on phone a fixed button at the bottom).
+- **Summary tiles:** total cost, total input, total output, total cache read, total cache write, total API time, total wall time, number of steps.
+- **Stats per model** (the table the owner asked for). One row per model + effort (e.g. "Opus 5.5 · High", "Opus 5.5 · Medium", "Opus 5.5" when no effort was written, "Sonnet 5.5 · High", "Haiku 5.5 · Max"), with columns:
+  - Steps (how many steps used it)
+  - Total input, total output, total cache read, total cache write
+  - Total cost (recorded + estimated, with the estimated part marked "est.")
+  - Share of the project's cost (a small inline bar)
+  - Total API time, total wall time
+  - Average cost per step
+  - A **Total** row at the bottom. A toggle groups rows by model only (Opus / Sonnet / Haiku) instead of model + effort.
+- **Cost by step:** a horizontal bar per step in step order, so the expensive steps stand out. Estimated costs are drawn hatched/lighter with "est.".
+- **Steps**, grouped by **phase** (e.g. "Planning & design", "Implementation") and, where I wrote one, a **sub-group** (e.g. "Phase 0"). Each step is a row (desktop) or card (phone):
   - Step number and title
-  - One line per model used: model badge + effort, input, output, cache read, cache write, cost
+  - One line per model: model badge + effort, input, output, cache read, cache write, cost ("est." if estimated)
   - API duration and wall duration if recorded
-  - Optional notes (plain text, short)
+  - Optional short notes
+  - A "⋯" menu: edit, move up, move down, delete
 - Missing values show as "—", never as 0.
 
-**Admin (`/admin`)**, password protected:
-- **Add step** (the fast path): pick project (defaults to the last one used), title, phase (defaults to the last used phase in that project), then one big **"Paste usage"** box. The parsed result appears live underneath as an editable table (model, effort, tokens, cost, durations). Save. Then the form clears and keeps the project and phase, ready for the next step. 3 steps: open, paste + title, save.
-- Edit and delete a step (delete confirmed), move a step up/down.
-- New / edit project: name, slug (auto), description, status.
-- Delete a project only when it has no steps, otherwise blocked with a reason.
+**Paste steps** (the fast path, a panel that slides over the project page)
+1. Paste anything: one line, one step, or my whole running notes for the project.
+2. Underneath, live, a **preview** of what was understood: each step with its phase / sub-group, title, models, numbers, cost (recorded, or estimated and marked), durations. Steps that are **already in the project** (same title and same numbers) are shown greyed out as "already added" and skipped. So I can keep one running doc per project and just re-paste the whole thing each time: only the new steps get added.
+3. Anything it couldn't read is listed as a warning with the line it came from. Every previewed field can be edited before saving.
+4. **Add N steps** (one click, `Cmd/Ctrl+Enter` works too). The panel closes, the new steps are highlighted briefly, and a toast says "Added N steps".
 
-### 1.4 The paste parser (what it must understand)
-From my existing notes:
-```
-Claude-opus-5-5 Medium:  29.8k input, 78.4k output, 4.7m cache read, 536.3k cache write ($5.68)
-claude-haiku-5-5:  1.4k input, 141.3k output, 5.2m cache read, 231.7k cache write ($0.72)
-Claude-opus-5-5 High:  606 input, 3.6k output, 100.1k cache read, 37.6k cache write
-... ($0.4368). Total duration (API):  19m 52s. Total duration (wall): 2h 14m 22s
-```
-- One usage line per model; a step can have several (see "Inventory Notes").
-- Model name is case-insensitive; effort (Low/Medium/High/xHigh/Max) is optional.
-- Numbers: plain, `k` (×1,000) and `m` (×1,000,000), stored as whole tokens.
-- Cost in `($x.xx)` is optional (missing → "not recorded").
-- Durations `Total duration (API)` and `Total duration (wall)` are optional, formats like `3m 56s`, `2h 14m 22s`, `45s`.
-- Anything it can't read is shown as a warning, and the fields stay editable. It never silently drops text.
+**New project (`/new`):** name (slug made from it), optional description, and the same paste box. If I paste notes whose first line is a project name followed by a colon (like "Wedding Plan Redesign:"), the name is filled in from it.
 
-### 1.5 Look and feel (no design directions, decided here)
-- **Personality:** calm, precise, editorial-meets-dashboard. Think Linear / Vercel docs: lots of white space, crisp numbers, one accent colour.
-- **Type:** Inter for text, JetBrains Mono (tabular numbers) for every token count, cost and duration.
-- **Colour:** neutral greys (zinc), one accent (indigo) for links and the bars; model badges use three muted hues (Opus = violet, Sonnet = sky, Haiku = emerald). Light and dark mode (follows the system, with a toggle).
-- **Density:** medium. Steps are compact rows on desktop and stacked cards on phone.
-- **Voice:** plain and brief. Numbers formatted like the notes: `29.8k`, `4.7M`, `$5.68`, `2h 14m`.
+**Edit step:** the same fields as the preview, for one step: title, phase, sub-group, notes, each model line, durations. "Re-paste" box to replace the numbers from a new paste.
+
+**Delete:** step and project deletes show an **Undo** toast for 10 seconds and go to a soft-deleted state (`deleted_at`). A small "Recently deleted" link at the bottom of the project page lists them with Restore, for 30 days. A project with steps can be deleted the same way (its steps go with it and come back with it).
+
+### 1.4 What the paste understands
+Taken from my two notes files in `docs/seed-data/`. Line by line:
+
+| Line looks like | Means |
+|---|---|
+| `Capability Inventory Mapping` or `Second Leak Review:` (text, no numbers) | The title of the next step |
+| `Claude-opus-5-5 Medium:  29.8k input, 78.4k output, 4.7m cache read, 536.3k cache write ($5.68)` | One model line for the current step |
+| A second model line right after it (see "Inventory Notes") | Another model in the same step |
+| `Money Model:  Claude-opus-5-5 Medium:  44 input, … ($1.65).  Total duration (API):  3m 56s. Total duration (wall): 8m 54s` | Title and model line on one line, with durations. Titles may contain commas, "…" and colons |
+| `IMPLEMENTATION:` (all capitals) | Starts a new **phase** ("Implementation"). Steps before the first phase line go to "Planning & design" |
+| `Phase 0:` (starts with "Phase") | Starts a **sub-group** inside the current phase |
+| `Wedding Plan Redesign:` as the very first line, followed by another title line | The project name (used by New project; ignored when pasting into a project) |
+| Blank lines | Ignored |
+
+Details:
+- Model names are case-insensitive (`Claude-opus-5-5`, `claude-opus-5-5`); effort (`Low`, `Medium`, `High`, `xHigh`, `Max`, any case) is optional.
+- Numbers: plain (`534`), `k` (×1,000) and `m` (×1,000,000), stored as whole tokens.
+- Cost `($x.xx)` is optional; any number of decimals (`$0.4368`) is kept exactly. Missing → estimated (1.5).
+- Durations `Total duration (API)` / `Total duration (wall)` are optional, formats `45s`, `3m 56s`, `2h 14m 22s`, and may sit on the model line or the line after it.
+- A title with no model line under it before the next title is a warning ("no usage found for …"), never silently dropped.
+
+### 1.5 Estimated costs
+When a model line has no cost, the site estimates it from the token counts and the model's price, and always labels it **est.** (never mixed in silently). Totals show both: e.g. "$95.40 · incl. $0.39 est.".
+
+Official prices per million tokens (Anthropic, as of 2026-10):
+
+| Model | Input | Output | Cache read | Cache write |
+|---|---|---|---|---|
+| Opus 5.5 | $4.00 | $20.00 | $0.20 | from input × multiplier |
+| Sonnet 5.5 | $2.00 | $10.00 | $0.20 | from input × multiplier |
+| Haiku 5.5 | $0.10 ($0.50 for prompts over 100K) | $0.50 ($2.50 over 100K) | check at build | from input × multiplier |
+
+Two things the token totals alone can't tell: whether cache writes were 5-minute (1.25× input) or 1-hour (2× input), and whether Haiku requests were in the over-100K price tier. So **the rates are calibrated against my own recorded costs**: at build time a script tries those options per model against every step that has a recorded cost and keeps the closest. A quick check on the seed data already shows why: Sonnet 5.5 matches 5-minute writes, Opus 5.5 lands near 1-hour writes, and Haiku 5.5 only matches the over-100K tier. The page shows the accuracy in a footnote ("Estimates use rates calibrated on 19 recorded steps, typically within ±x%"). Prices live in one file (`src/lib/pricing.ts`) so they're easy to update.
+
+### 1.6 Look and feel (decided here, no design directions)
+- **Personality:** calm, precise, editorial-meets-dashboard. Think Linear / Vercel docs: white space, crisp numbers, one accent colour.
+- **Type:** Inter for text, JetBrains Mono with tabular figures for every token count, cost and duration, right-aligned in tables.
+- **Colour:** neutral greys (zinc), one accent (indigo) for links, buttons and bars. Model badges in three muted hues: Opus violet, Sonnet sky, Haiku emerald. Estimated values in the muted text colour with a dotted underline. Light and dark mode (follows the system, with a toggle).
+- **Density:** medium. Tables scroll sideways on phone inside their card only (the page itself never scrolls sideways); the first column (model / step) stays pinned.
+- **Voice:** plain and brief. Numbers formatted like my notes: `29.8k`, `4.7M`, `$5.68`, `2h 14m`. Exact values on hover / tap.
 - **Identity:** wordmark "AI Build Log" in Inter semibold; favicon a small indigo square with a mono "›_" mark. Page titles: `<Project> · AI Build Log`.
 
-### 1.6 Out of scope (for now)
-Multiple users or roles, comments, file uploads, automatic import from the Claude Code session files, charts beyond the simple bars, estimating cost from pricing when it wasn't recorded (see Open questions).
+### 1.7 Out of scope (for now)
+Login and roles, comments, file uploads, automatic import from Claude Code session files, charts beyond the simple bars, exporting.
 
-### 1.7 Open questions (each with a default)
+### 1.8 Open questions (each with a default)
 
 | Question | Default if unanswered |
 |---|---|
-| Should steps without a recorded cost get an *estimated* cost from model pricing? | No. Show "not recorded"; can be added later |
-| Public read-only, or everything behind the password? | Public read-only, `noindex` |
-| Custom domain? | No, use the `*.vercel.app` URL |
+| Custom domain? | No, the `*.vercel.app` URL |
+| Show time-per-model for steps that used two models? | Yes, split by each model's share of the step's output tokens, marked "≈" |
 
 ---
 
 ## Part 2: Technical implementation
 
-### 2.1 Stack (default playbook stack, trimmed)
+### 2.1 Stack (the playbook's default stack, trimmed)
 
 | Concern | Choice | Why |
 |---|---|---|
 | Framework | Next.js (App Router) + TypeScript, current Node.js LTS | Default stack |
-| Database | Neon Postgres: `production` branch for real data, `test` branch for tests | Default stack; lets me add steps from the browser |
+| Database | Neon Postgres: `production` branch for real data, `test` branch for tests | Default stack; lets me add steps from any browser |
 | Data access | Drizzle ORM + Neon serverless driver, drizzle-kit SQL migrations in the repo | Default stack |
-| Writes | Server Actions + Zod (same validation on the server) | Default stack |
-| Styling | Tailwind CSS + a few shadcn/ui components (Button, Input, Textarea, Select, Dialog, Badge), restyled to the tokens below | Default stack, kept small |
+| Writes | Server Actions + Zod; the server re-parses the pasted text itself instead of trusting the browser's preview | Default stack; one source of truth for parsing |
+| Styling | Tailwind CSS + a few shadcn/ui components (Button, Input, Textarea, Sheet, Dialog, DropdownMenu, Tooltip, Toast/Sonner, Switch), restyled to the tokens | Default stack, kept small |
 | Fonts / icons | `next/font` (Inter, JetBrains Mono), `lucide-react` | Default stack |
-| Auth | Single `ADMIN_PASSWORD` env var → signed, httpOnly session cookie (`jose`, HS256 with `SESSION_SECRET`), checked in `proxy.ts` for `/admin/*` and in every Server Action | One editor, no need for an auth service |
-| Tests | Vitest (parser + formatters, DB tests on `test`) + Playwright (one smoke spec, one add-step spec) | Default stack, minimal set |
+| Auth | None (public, by choice). Basic abuse guard: request-size limit on paste (100 KB) and Zod limits on every field | Owner decision 2026-10-14 |
+| Tests | Vitest (parser, pricing, formatters, stats; DB tests on `test`) + Playwright (smoke + paste flow) | Default stack, minimal set |
 | Hosting | GitHub `main` → Vercel, every push deploys to production | Default stack |
 
-Versions pinned to the latest stable at setup, checked against the installed packages' docs (Next.js changes between versions, e.g. `proxy.ts` vs `middleware.ts`).
+Versions pinned to the latest stable at setup, checked against the installed packages' docs (Next.js changes between versions).
 
 ### 2.2 Environments and secrets
 
@@ -112,7 +147,7 @@ Versions pinned to the latest stable at setup, checked against the installed pac
 | Vercel Preview | `test` | Vercel → Preview |
 | Vercel Production | `production` | Vercel → Production |
 
-Variables: `DATABASE_URL` (direct, migrations), `DATABASE_URL_POOLED` (app), `ADMIN_PASSWORD`, `SESSION_SECRET`. `.env.example` lists names only. Never printed or committed. Migrations run on `test` first (`npm run db:migrate:test`), production (`npm run db:migrate`) only with my approval.
+Variables: `DATABASE_URL` (direct, migrations), `DATABASE_URL_POOLED` (app). `.env.example` lists names only. Never printed or committed. Migrations run on `test` first (`npm run db:migrate:test`), production (`npm run db:migrate`) only with my approval.
 
 ### 2.3 Data
 
@@ -123,68 +158,80 @@ projects
   name          text not null
   description   text
   status        text not null default 'in_progress'   -- 'in_progress' | 'done'
-  created_at    timestamptz not null default now()
-  updated_at    timestamptz not null default now()
+  created_at, updated_at  timestamptz not null default now()
+  deleted_at    timestamptz                            -- soft delete
 
 steps
   id               uuid pk
-  project_id       uuid not null references projects(id) on delete restrict
-  position         integer not null                -- order within the project
+  project_id       uuid not null references projects(id) on delete cascade
+  position         integer not null                   -- order within the project
   phase            text not null default 'Planning & design'
+  sub_group        text                               -- e.g. 'Phase 0'
   title            text not null
   notes            text
-  api_duration_s   integer                          -- null = not recorded
+  api_duration_s   integer                            -- null = not recorded
   wall_duration_s  integer
-  created_at, updated_at timestamptz
-  unique (project_id, position)  -- deferrable, so reorders can swap
+  fingerprint      text not null                      -- hash of normalised title + usage numbers, for "already added"
+  source_text      text                               -- the pasted lines this step came from
+  created_at, updated_at  timestamptz
+  deleted_at       timestamptz
   index (project_id, position)
+  index (project_id, fingerprint)
 
-step_usages               -- one row per model line in a step
+step_usages                -- one row per model line in a step
   id             uuid pk
   step_id        uuid not null references steps(id) on delete cascade
   position       integer not null
-  model          text not null      -- normalised, e.g. 'claude-opus-5-5'
+  model          text not null      -- normalised: 'claude-opus-5-5'
   effort         text               -- 'low'|'medium'|'high'|'xhigh'|'max'|null
   input_tokens   bigint not null default 0
   output_tokens  bigint not null default 0
   cache_read     bigint not null default 0
   cache_write    bigint not null default 0
-  cost_cents     numeric(12,4)      -- null = not recorded (keeps $0.4368 exact)
+  cost_usd       numeric(12,4)      -- recorded cost; null = not recorded
   index (step_id)
 ```
-- Totals are computed in SQL (sum per project / per model); a project's total cost is shown with a "+ N steps without cost" note when any are null.
-- Deleting a project with steps is blocked (`restrict`) with a plain message.
-- **Seed:** `scripts/seed.ts` loads the Wedding Plan Redesign notes (all 14 steps; phases "Planning & design" for the first 11 and "Implementation" for the last 3) by running them through the real parser, so the parser is tested on real data. Runs on `test` for tests; on `production` once, with my OK.
+- **Estimated cost is computed, not stored**, from `pricing.ts` at read time, so updating prices updates every estimate.
+- **Stats per model** come from one SQL query grouped by `(model, effort)` over non-deleted steps (sums of the four token columns, sum of recorded cost, count of distinct steps), with estimates and duration splits added in `src/lib/stats.ts`. The home page runs the same query without the project filter.
+- Soft-deleted rows are excluded everywhere except "Recently deleted"; a daily purge isn't needed at this size (the list just hides items older than 30 days).
+- **Seed:** `scripts/seed.ts` reads `docs/seed-data/*.txt` and runs them through the real parser and the real save action, so the parser is tested on real data. Runs on `test` for tests; on `production` once, with my OK.
 
 ### 2.4 Pages and routes
 
 | Route | Purpose |
 |---|---|
-| `/` | Projects overview + all-time totals |
-| `/p/[slug]` | Project page (summary tiles, cost by step, cost by model, steps by phase) |
-| `/admin/login` | Password form |
-| `/admin` | Add step (fast path), list of projects with edit links |
-| `/admin/projects/new`, `/admin/projects/[id]` | Create / edit project, list its steps with edit, reorder, delete |
-| `/admin/steps/[id]` | Edit a step (same form as add) |
+| `/` | Totals, project cards, all-projects stats per model |
+| `/p/[slug]` | Project page: tiles, stats per model, cost by step, steps by phase, Paste steps panel, recently deleted |
+| `/p/[slug]/steps/[id]` | Edit a step |
+| `/p/[slug]/settings` | Edit project name, description, status; delete project |
+| `/new` | New project (name + optional paste) |
 | `not-found`, `error` | Styled 404 and error pages |
 
-Reading pages are Server Components that query Neon directly; they revalidate on every write (`revalidatePath` in the Server Actions).
+Reading pages are Server Components that query Neon directly; every Server Action calls `revalidatePath` for the pages it changes.
 
 ### 2.5 Key pieces
-- **`src/lib/parse-usage.ts`**: pure function `parseUsage(text) → { usages[], apiDurationS?, wallDurationS?, warnings[] }`. Regex per usage line: `^(?<model>[a-z0-9.\-]+)(?:\s+(?<effort>low|medium|high|xhigh|max))?:\s*(?<rest>.+)$` (case-insensitive), then each `<num><k|m>? <field>` pair inside `rest`, cost from `\(\$([\d.]+)\)`, durations from `Total duration \((API|wall)\):\s*([\dhms ]+)`. Handles the "Title: model ...: numbers" one-line form used in the Implementation notes by splitting on the first model name. Heavily unit-tested with every line from the notes.
-- **`src/lib/format.ts`**: `formatTokens` (29.8k, 4.7M), `formatCost` ($5.68, "—"), `formatDuration` (2h 14m). Tabular mono everywhere.
-- **Add-step form** (client component): textarea → `parseUsage` on change → editable usage table → Server Action re-parses/validates with Zod and saves step + usages in one transaction. Remembers last project and phase in `localStorage`.
-- **Cost bars**: plain divs with widths as a % of the max step cost. No chart library.
-- **Theme**: CSS variables in `src/styles/tokens.css` (light + dark), Tailwind theme mapped to them, toggle stored in a cookie to avoid a flash.
+- **`src/lib/parse-notes.ts`**: pure function `parseNotes(text) → { projectName?, steps: ParsedStep[], warnings: {line, message}[] }`. Line classifier, in order:
+  1. A **model match** anywhere in the line: `/(claude-[a-z0-9-]+)(?:\s+(low|medium|high|xhigh|max))?\s*:\s*/i` followed by at least one `<number><k|m>? input|output|cache read|cache write`. Text before the match (minus the trailing `:`) is a title for a new step; without it, the line is another model line for the current step.
+  2. Inside a model line: each `([\d.]+)\s*([km])?\s+(input|output|cache read|cache write)`, cost `\(\$([\d.]+)\)`, durations `Total duration \((API|wall)\):\s*((?:\d+\s*[hms]\s*)+)`.
+  3. A durations-only line attaches to the current step.
+  4. `^phase\b.*:?$` (case-insensitive) → sub-group. A line whose letters are all capitals → new phase (title-cased: "Implementation"), resetting the sub-group.
+  5. Any other text → pending title. Two pending titles in a row: the first is the project name if it's line 1, otherwise a warning.
+- **`src/lib/pricing.ts`**: the price table from 1.5, the calibrated cache-write multiplier and Haiku tier per model, and `estimateCost(usage)`. `scripts/calibrate-pricing.ts` prints, per model, the error of each option against all recorded costs, and the chosen one; its result is pasted into `pricing.ts` with the date.
+- **`src/lib/stats.ts`**: `statsByModel(rows, {groupBy: 'model' | 'model+effort'})`: sums, recorded vs estimated cost, share, average per step, durations (single-model steps count fully; multi-model steps split by output-token share and flagged "≈").
+- **`src/lib/format.ts`**: `formatTokens` (29.8k, 4.7M), `formatCost` ($5.68, "est." variant, "—"), `formatDuration` (2h 14m).
+- **Paste panel** (client component): textarea → `parseNotes` on input (debounced) → preview list with inline edits and "already added" detection against the project's fingerprints (sent with the page) → Server Action `addSteps(projectId, text, edits)` re-parses, validates with Zod, skips existing fingerprints, inserts all steps + usages in one transaction at the end of the project, returns the new step ids for highlighting.
+- **Undo:** delete actions set `deleted_at` and return an id; the toast's Undo calls `restore(id)`.
+- **Cost bars / share bars:** plain divs, width as a % of the max. No chart library.
+- **Theme:** CSS variables in `src/styles/tokens.css` (light + dark), Tailwind theme mapped to them, choice kept in a cookie so there's no flash.
 
-### 2.6 Design tokens (starting point, copied into `src/styles/tokens.css`)
+### 2.6 Design tokens (copied into `src/styles/tokens.css`)
 ```css
 :root {
   --bg: #fafafa; --surface: #ffffff; --border: #e4e4e7;
   --text: #18181b; --text-muted: #71717a;
   --accent: #4f46e5; --accent-soft: #eef2ff; --on-accent: #ffffff;
   --opus: #7c3aed; --sonnet: #0284c7; --haiku: #059669;
-  --danger: #dc2626;
+  --danger: #dc2626; --success: #16a34a;
   --radius: 10px;
 }
 .dark {
@@ -192,62 +239,69 @@ Reading pages are Server Components that query Neon directly; they revalidate on
   --text: #fafafa; --text-muted: #a1a1aa;
   --accent: #818cf8; --accent-soft: #1e1b4b; --on-accent: #09090b;
   --opus: #a78bfa; --sonnet: #38bdf8; --haiku: #34d399;
-  --danger: #f87171;
+  --danger: #f87171; --success: #4ade80;
 }
 ```
-No raw hex values outside this file. Max content width 1080px; 16px base; spacing on a 4px scale.
+No raw hex values outside this file. Max content width 1120px; 16px base; spacing on a 4px scale.
 
 ### 2.7 Project structure
 ```
 src/
-  app/            (routes above, layout.tsx, not-found.tsx, error.tsx)
-  components/     AppShell, PageHeader, StatTile, CostBars, ModelBadge, StepRow, UsageTable, ui/*
+  app/            routes above, layout.tsx, not-found.tsx, error.tsx, robots.ts
+  actions/        steps.ts, projects.ts   (Server Actions)
+  components/     AppShell, PageHeader, StatTile, ModelStatsTable, CostBars, ModelBadge,
+                  StepRow, PastePanel, ParsedPreview, UndoToast, ThemeToggle, ui/*
   db/             schema.ts, client.ts, queries.ts
-  lib/            parse-usage.ts, format.ts, auth.ts
+  lib/            parse-notes.ts, pricing.ts, stats.ts, format.ts, fingerprint.ts
   styles/         tokens.css
-  proxy.ts
 drizzle/          SQL migrations
-scripts/          seed.ts, seed-data/wedding-plan-redesign.txt
-tests/            unit/*.test.ts, e2e/smoke.spec.ts, e2e/add-step.spec.ts
+scripts/          seed.ts, calibrate-pricing.ts
+docs/             PLAN.md, seed-data/*.txt
+tests/            unit/*.test.ts, e2e/smoke.spec.ts, e2e/paste.spec.ts
 ```
 
 ### 2.8 Build (one model, one go)
-Per my choice, the whole build is done in one session by one model: **Opus 5.5 High** (it's mostly visual work that has to look professional, and the global model table ranks Opus 5.5 High best for presentation; the rest is small). Order, committing and pushing after each item:
+Built in one session by **Sonnet 5.5 High** (owner's choice). Order, committing and pushing after each item:
 
 - [ ] 1. Connect GitHub (repo URL from me), Neon (`production` + `test` branch, `! neon login`), Vercel (`! vercel login`, link, env vars)
-- [ ] 2. Scaffold Next.js + Tailwind + shadcn + Drizzle + Vitest + Playwright, npm scripts: `typecheck`, `lint`, `build`, `test`, `test:e2e`, `db:generate`, `db:migrate:test`, `db:migrate`, `db:seed`
+- [ ] 2. Scaffold Next.js + Tailwind + shadcn + Drizzle + Vitest + Playwright, with npm scripts `typecheck`, `lint`, `build`, `test`, `test:e2e`, `db:generate`, `db:migrate:test`, `db:migrate`, `db:seed`, `calibrate`
 - [ ] 3. Schema + first migration (`test`, then `production` with my approval)
-- [ ] 4. `parse-usage.ts` + `format.ts` with unit tests on every line of the Wedding notes
-- [ ] 5. Seed script, seeded on `test` (and `production` with my OK)
-- [ ] 6. Tokens, AppShell, PageHeader, theme toggle, fonts, favicon, 404/error, `noindex` + `robots.txt`
-- [ ] 7. Projects overview `/`
-- [ ] 8. Project page `/p/[slug]`
-- [ ] 9. Admin auth (`proxy.ts`, login, session cookie)
-- [ ] 10. Add step with live paste parsing; edit / reorder / delete step; create / edit project
-- [ ] 11. Playwright: smoke (home + project page load and read the DB) and add-step flow; screenshots at 390 and 1280, light and dark, checked by eye
+- [ ] 4. `parse-notes.ts` with unit tests covering **every line of both seed files** (21 steps, phases, "Phase 0", multi-model step, missing cost, one-line titles with commas and "…", durations, lowercase effort)
+- [ ] 5. `pricing.ts` + `calibrate-pricing.ts` (Haiku cache-read price checked against Anthropic's pricing page), `stats.ts`, `format.ts`, with unit tests
+- [ ] 6. Server Actions (add steps with duplicate skipping, edit, reorder, soft delete, restore, projects) + seed script; seeded on `test` (and `production` with my OK)
+- [ ] 7. Tokens, AppShell, PageHeader, theme toggle, fonts, favicon, 404/error, `noindex` + `robots.txt`
+- [ ] 8. Home page `/`
+- [ ] 9. Project page `/p/[slug]` incl. stats per model and cost bars
+- [ ] 10. Paste panel, edit step, project settings, new project, undo / recently deleted
+- [ ] 11. Playwright: smoke (home + project page read the DB) and paste flow (paste the DEUS notes into an empty project → 7 steps; re-paste → 0 added, 7 "already added"); screenshots at 390 and 1280, light and dark, checked by eye
 - [ ] 12. Deploy check: live URL loads, Vercel spend limit set, Neon usage limit set
-- **Done when:** the live site shows Wedding Plan Redesign with all 14 steps and correct totals, and I can add a new step by pasting usage text on my phone.
+- **Done when:** the live site shows both projects with correct totals and per-model stats matching a hand check of the seed files, and I can add a new step from my phone by pasting one line.
 
 ### 2.9 Running the live app
-- **Backups:** Neon's restore window on my plan (point-in-time restore of `production`).
+- **Backups:** Neon's restore window on my plan (point-in-time restore of `production`), plus soft deletes.
 - **Errors:** Vercel logs / observability; I look when something breaks.
-- **Spending:** Vercel spend management on; Neon free/Launch plan usage limits.
+- **Spending:** Vercel spend management on; Neon usage limits.
 - **Rollback:** Vercel instant rollback; migrations stay backward compatible for one release.
 - **Search engines:** `noindex` + `robots.txt` disallow all.
+- **Public editing risk:** anyone with the link can edit. Accepted; undo + Neon restore cover mistakes. If it ever becomes a problem, add a single password (small change, noted here so it isn't forgotten).
 
 ### 2.10 Things I need to do myself
 | When | Action |
 |---|---|
-| Before build step 1 | Create an empty GitHub repo and send the URL |
-| Build step 1 | `! neon login`, `! vercel login`; pick the admin password and put it in `.env.local` myself |
-| Build step 3 / 5 | Approve the production migration and the production seed |
-| End | Try adding a step from my phone |
+| Before build step 1 | Create an empty GitHub repo and send the URL; create the Neon project and the Vercel project (or let Claude create Vercel) |
+| Build step 1 | `! neon login`, `! vercel login`; paste the Neon connection strings into `.env.local` |
+| Build steps 3 / 6 | Approve the production migration and the production seed |
+| End | Try pasting a new step from my phone |
 
 ---
 
 ## Decisions so far
-- 2026-10-14: Light playbook. One plan document, no design directions, one model (Opus 5.5 High) builds everything in one session. Default stack kept (Next.js, Neon, GitHub, Vercel).
-- 2026-10-14: Data enters by pasting usage text into an admin form; public read-only site, `noindex`.
+- 2026-10-14: Light playbook. One plan document, no design directions, one model builds everything in one session. Default stack kept (Next.js, Neon, GitHub, Vercel).
+- 2026-10-14 (v0.2): No login; the whole site is public, read and write, `noindex`. Soft deletes with undo instead.
+- 2026-10-14 (v0.2): Data enters by pasting notes in my existing format, any amount at once; steps already in the project are skipped.
+- 2026-10-14 (v0.2): Missing costs are estimated from Anthropic prices, calibrated on my recorded costs, always labelled "est.".
+- 2026-10-14 (v0.2): Stats per model (and model + effort) on every project and across all projects.
+- 2026-10-14 (v0.2): Build model is Sonnet 5.5 High (owner's choice).
 
 ## Project details
 | | |
