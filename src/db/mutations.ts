@@ -281,6 +281,42 @@ export async function moveStep(stepId: string, direction: "up" | "down") {
   });
 }
 
+/**
+ * Moves a step (with its model lines) to another project. It goes to the end of the target, or to
+ * `position` when given (used by Undo to put it back). Returns where it came from so Undo can.
+ */
+export async function moveStepToProject(stepId: string, targetProjectId: string, position?: number) {
+  return db.transaction(async (tx) => {
+    const [step] = await tx
+      .select({ projectId: steps.projectId, position: steps.position })
+      .from(steps)
+      .where(and(eq(steps.id, stepId), sql`${steps.deletedAt} is null`));
+    if (!step) throw new Error("Step not found");
+    if (step.projectId === targetProjectId) throw new Error("The step is already in that project");
+    const [target] = await tx
+      .select({ id: projects.id, name: projects.name, slug: projects.slug })
+      .from(projects)
+      .where(and(eq(projects.id, targetProjectId), sql`${projects.deletedAt} is null`));
+    if (!target) throw new Error("Project not found");
+
+    let newPosition = position;
+    if (newPosition === undefined) {
+      const [{ max }] = await tx
+        .select({ max: sql<number>`coalesce(max(${steps.position}), 0)` })
+        .from(steps)
+        .where(eq(steps.projectId, targetProjectId));
+      newPosition = Number(max) + 1;
+    }
+    await tx
+      .update(steps)
+      .set({ projectId: targetProjectId, position: newPosition, updatedAt: new Date() })
+      .where(eq(steps.id, stepId));
+    await touchProject(tx, step.projectId);
+    await touchProject(tx, targetProjectId);
+    return { fromProjectId: step.projectId, fromPosition: step.position, toName: target.name, toSlug: target.slug };
+  });
+}
+
 export async function stepIdsInProject(projectId: string) {
   return (await db.select({ id: steps.id }).from(steps).where(eq(steps.projectId, projectId))).map((r) => r.id);
 }

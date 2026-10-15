@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import { db } from "./client";
 import { projects, stepUsages, steps, type Project, type Step } from "./schema";
 import { knownFingerprints } from "@/lib/fingerprint";
@@ -71,6 +71,15 @@ export async function getStep(stepId: string): Promise<(StepWithUsages & { proje
   if (!row) return null;
   const [withU] = await withUsages([row.step]);
   return { ...withU, project: row.project };
+}
+
+/** The projects a step can be moved to: every non-deleted project except its own, newest first. */
+export async function listMoveTargets(excludeProjectId: string): Promise<{ id: string; name: string; slug: string }[]> {
+  return db
+    .select({ id: projects.id, name: projects.name, slug: projects.slug })
+    .from(projects)
+    .where(and(isNull(projects.deletedAt), ne(projects.id, excludeProjectId)))
+    .orderBy(desc(projects.updatedAt));
 }
 
 export async function listRecentlyDeletedSteps(projectId: string): Promise<StepWithUsages[]> {

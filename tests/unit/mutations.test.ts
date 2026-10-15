@@ -7,13 +7,14 @@ import {
   deleteProject,
   deleteStep,
   moveStep,
+  moveStepToProject,
   repasteStepUsages,
   restoreProject,
   restoreStep,
   updateProject,
   updateStep,
 } from "@/db/mutations";
-import { getProjectBySlug, getProjectSteps, listProjects, listRecentlyDeletedSteps, usageRows } from "@/db/queries";
+import { getProjectBySlug, getProjectSteps, listMoveTargets, listProjects, listRecentlyDeletedSteps, usageRows } from "@/db/queries";
 import type { Effort } from "@/lib/parse-notes";
 import { statsByModel } from "@/lib/stats";
 import { MAX_PASTE_CHARS } from "@/lib/schemas";
@@ -236,6 +237,65 @@ describe("step edits", () => {
     await deleteStep(added[1]);
     await moveStep(added[2], "up");
     expect((await getProjectSteps(p.id)).slice(0, 2).map((s) => s.title)).toEqual(["Design Guide from Chosen Design Option", "Overall Plan, Including Content"]);
+  });
+});
+
+describe("moveStepToProject", () => {
+  it("moves a step with its model lines to the end of the other project and updates both totals", async () => {
+    const a = await createProject({ name: "DEUS" });
+    const b = await createProject({ name: "Wedding" });
+    const { added } = await addSteps(a.id, DEUS);
+    await addSteps(b.id, "Existing: claude-opus-5-5 High: 1k input, 2k output ($1.00)");
+    const before = (await getProjectSteps(a.id))[2];
+
+    const r = await moveStepToProject(added[2], b.id);
+    expect(r.fromProjectId).toBe(a.id);
+
+    expect(await getProjectSteps(a.id)).toHaveLength(6);
+    const target = await getProjectSteps(b.id);
+    expect(target.map((s) => s.title)).toEqual(["Existing", before.title]);
+    expect(target[1]).toMatchObject({ phase: before.phase, subGroup: before.subGroup, notes: before.notes });
+    expect(target[1].usages).toEqual(before.usages);
+    expect(await listRecentlyDeletedSteps(a.id)).toHaveLength(0);
+
+    const stepsCounted = async (projectId: string) =>
+      statsByModel(await usageRows(projectId), { groupBy: "model" }).total.steps;
+    expect(await stepsCounted(a.id)).toBe(6);
+    expect(await stepsCounted(b.id)).toBe(2);
+  });
+
+  it("undo: moving back to the old project and position restores the order", async () => {
+    const a = await createProject({ name: "DEUS" });
+    const b = await createProject({ name: "Wedding" });
+    const { added } = await addSteps(a.id, DEUS);
+    const titles = (await getProjectSteps(a.id)).map((s) => s.title);
+    const r = await moveStepToProject(added[2], b.id);
+    await moveStepToProject(added[2], r.fromProjectId, r.fromPosition);
+    expect((await getProjectSteps(a.id)).map((s) => s.title)).toEqual(titles);
+    expect(await getProjectSteps(b.id)).toHaveLength(0);
+  });
+
+  it("refuses the same project, a deleted target, an unknown target and a deleted step", async () => {
+    const a = await createProject({ name: "DEUS" });
+    const b = await createProject({ name: "Wedding" });
+    const { added } = await addSteps(a.id, DEUS);
+    await expect(moveStepToProject(added[0], a.id)).rejects.toThrow();
+    await deleteProject(b.id);
+    await expect(moveStepToProject(added[0], b.id)).rejects.toThrow();
+    await expect(moveStepToProject(added[0], "00000000-0000-0000-0000-000000000000")).rejects.toThrow();
+    const c = await createProject({ name: "Third" });
+    await deleteStep(added[1]);
+    await expect(moveStepToProject(added[1], c.id)).rejects.toThrow();
+    expect(await getProjectSteps(a.id)).toHaveLength(6);
+  });
+
+  it("lists the other non-deleted projects as targets", async () => {
+    const a = await createProject({ name: "DEUS" });
+    const b = await createProject({ name: "Wedding" });
+    const c = await createProject({ name: "Gone" });
+    await deleteProject(c.id);
+    expect((await listMoveTargets(a.id)).map((p) => p.name)).toEqual(["Wedding"]);
+    expect(b.id).toBeTruthy();
   });
 });
 

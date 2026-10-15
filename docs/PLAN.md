@@ -51,7 +51,7 @@ A small, professional-looking website that documents my AI projects. Each **proj
   - One line per model: model badge + effort, input, output, cache read, cache write, cost ("est." if estimated)
   - API duration and wall duration if recorded
   - Optional short notes
-  - A "⋯" menu: edit, move up, move down, delete
+  - A "⋯" menu: edit, move up, move down, move to another project, delete
 - Missing values show as "—", never as 0.
 
 **Paste steps** (the fast path, a panel that slides over the project page)
@@ -63,6 +63,8 @@ A small, professional-looking website that documents my AI projects. Each **proj
 **New project (`/new`):** name (slug made from it), optional description, and the same paste box. If I paste notes whose first line is a project name followed by a colon (like "Wedding Plan Redesign:"), the name is filled in from it.
 
 **Edit step:** the same fields as the preview, for one step: title, phase, sub-group, notes, each model line, durations. "Re-paste" box to replace the numbers from a new paste.
+
+**Move to another project:** the step's "⋯" menu has "Move to project…", which opens a panel listing the other projects. Picking one moves the step there at once: it leaves the current project (it is moved, not deleted, so it isn't under "Recently deleted") and goes to the end of the other project's list, keeping its phase, sub-group, notes, model lines and durations. A toast says "Step moved to <project>" with an **Undo** for 10 seconds that puts it back in its old project and position. Both projects' totals update. One step at a time.
 
 **Delete:** step and project deletes show an **Undo** toast for 10 seconds and go to a soft-deleted state (`deleted_at`). A small "Recently deleted" link at the bottom of the project page lists them with Restore, for 30 days. A project with steps can be deleted the same way (its steps go with it and come back with it).
 
@@ -223,6 +225,7 @@ Reading pages are Server Components that query Neon directly; every Server Actio
 - **`src/lib/stats.ts`**: `statsByModel(rows, {groupBy: 'model' | 'model+effort'})`: sums, recorded vs estimated cost, share, average per step, durations (single-model steps count fully; multi-model steps split by output-token share and flagged "≈").
 - **`src/lib/format.ts`**: `formatTokens` (29.8k, 4.7M), `formatCost` ($5.68, "est." variant, "—"), `formatDuration` (2h 14m).
 - **Paste panel** (client component): textarea → `parseNotes` on input (debounced) → preview list with inline edits and "already added" detection against the project's fingerprints (sent with the page) → Server Action `addSteps(projectId, text, edits)` re-parses, validates with Zod, skips existing fingerprints, inserts all steps + usages in one transaction at the end of the project, returns the new step ids for highlighting.
+- **Move to project:** `moveStepToProject(stepId, targetProjectId, position?)` re-points `steps.project_id` (usages follow the step id) and sets `position` to the end of the target (or to `position` when undoing), in one transaction that also touches both projects' `updated_at`. It refuses a deleted or identical target. No migration. The menu's project list comes from `listMoveTargets(excludeProjectId)` (non-deleted projects, newest first).
 - **Undo:** delete actions set `deleted_at` and return an id; the toast's Undo calls `restore(id)`.
 - **Cost bars / share bars:** plain divs, width as a % of the max. No chart library.
 - **Theme:** CSS variables in `src/styles/tokens.css` (light + dark), Tailwind theme mapped to them, choice kept in a cookie so there's no flash.
@@ -314,6 +317,7 @@ Built in one session by **Sonnet 5.5 High** (owner's choice). Order, committing 
 - 2026-10-14 (v0.3): Known gaps from the end-of-build review, not fixed yet: simultaneous pastes from two tabs can insert duplicates (no row lock); moving a step across a phase boundary splits the phase heading; a usage with an unknown model and no cost is left out of totals without a marker; token kinds missing from a model line are stored as 0 (conflicts with "missing shows —"); `1.2.3k`, `3m 56.4s` and `350ms` are misread without a warning; non-UUID ids in a hand-made request give a 500; `formatTokens(999_950)` shows "1000.0k"; the project page reads the whole `step_usages` table.
 - 2026-10-14 (v0.3): Live on Vercel. The Vercel project's Framework Preset had to be set to Next.js by hand (it was imported while the repo was empty). The database client connects on first query, so builds don't need `DATABASE_URL`. The team is on Hobby, whose 100 deployments/day are shared by all my projects; a push can come back "rate limited" and needs a redeploy later.
 - 2026-10-14 (v0.3): The scaffold's `cacheComponents` / `partialPrefetching` flags are off: pages read the database on every request (dynamic), which is what this app wants. Radix primitives (`radix-ui`) are used directly with our tokens instead of the shadcn CLI, to avoid the default shadcn look.
+- 2026-10-15 (v0.4): Steps can be moved to another project from the step menu (see 1.3), with Undo. A moved step keeps its phase and sub-group and goes to the end of the target. Because it is moved rather than deleted, re-pasting running notes into the old project can add the step there again; accepted for now.
 
 ## Project details
 | | |

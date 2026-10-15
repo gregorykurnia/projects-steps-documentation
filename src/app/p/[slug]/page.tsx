@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Settings } from "lucide-react";
-import { existingFingerprints, getProjectBySlug, getProjectSteps, listRecentlyDeletedSteps, usageRows } from "@/db/queries";
+import { existingFingerprints, getProjectBySlug, getProjectSteps, listMoveTargets, listRecentlyDeletedSteps, usageRows } from "@/db/queries";
 import { statsByModel } from "@/lib/stats";
 import { stepCost } from "@/lib/steps-view";
 import { formatDate, formatDuration, formatExactTokens, formatTokens } from "@/lib/format";
@@ -39,11 +39,12 @@ export default async function ProjectPage({ params }: Props) {
   const project = await getProjectBySlug((await params).slug);
   if (!project) notFound();
 
-  const [steps, rows, fingerprints, deleted] = await Promise.all([
+  const [steps, rows, fingerprints, deleted, moveTargets] = await Promise.all([
     getProjectSteps(project.id),
     usageRows(project.id),
     existingFingerprints(project.id),
     listRecentlyDeletedSteps(project.id),
+    listMoveTargets(project.id),
   ]);
   const byModelEffort = statsByModel(rows, { groupBy: "model+effort" });
   const byModel = statsByModel(rows, { groupBy: "model" });
@@ -104,7 +105,14 @@ export default async function ProjectPage({ params }: Props) {
           <StepList
             steps={steps}
             renderMenu={(s, i, count) => (
-              <StepMenu stepId={s.id} slug={project.slug} title={s.title} index={i} count={count} />
+              <StepMenu
+                stepId={s.id}
+                slug={project.slug}
+                title={s.title}
+                index={i}
+                count={count}
+                moveTargets={moveTargets}
+              />
             )}
           />
         </div>

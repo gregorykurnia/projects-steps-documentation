@@ -5,6 +5,7 @@ import {
   addSteps,
   deleteStep,
   moveStep,
+  moveStepToProject,
   repasteStepUsages,
   restoreStep,
   updateStep,
@@ -47,4 +48,10 @@ export async function restoreStepAction(stepId: string) {
 export async function moveStepAction(stepId: string, direction: "up" | "down") {
   await moveStep(stepId, direction);
   refresh();
+}
+
+export async function moveStepToProjectAction(stepId: string, targetProjectId: string, position?: number) {
+  const result = await moveStepToProject(stepId, targetProjectId, position);
+  refresh();
+  return result;
 }

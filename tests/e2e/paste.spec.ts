@@ -163,3 +163,32 @@ test("one step that can't be saved doesn't stop the rest of the paste", async ({
   await expect(page.getByText("Added 1 step", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Fine Step" })).toBeVisible();
 });
+
+test("move a step to another project, undo it, move it again and bring it back", async ({ page }) => {
+  const count = () => page.locator("[data-step-id]");
+  const tokens = page.getByRole("heading", { name: "Tokens", level: 3 });
+  const moveTokensTo = async (project: RegExp) => {
+    await page.getByRole("button", { name: "Actions for Tokens" }).click();
+    await page.getByRole("menuitem", { name: "Move to project…" }).click();
+    await page.getByRole("button", { name: project }).click();
+  };
+
+  await page.goto("/p/deus-hcs-website");
+  await expect(count()).toHaveCount(7);
+  await moveTokensTo(/Wedding Plan Redesign/);
+  await expect(page.getByText("Step moved to Wedding Plan Redesign")).toBeVisible();
+  await expect(count()).toHaveCount(6);
+  await expect(tokens).toHaveCount(0);
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(count()).toHaveCount(7);
+
+  await moveTokensTo(/Wedding Plan Redesign/);
+  await expect(count()).toHaveCount(6);
+  await page.goto("/p/wedding-plan-redesign");
+  await expect(count()).toHaveCount(15);
+  await expect(tokens).toBeVisible();
+
+  // Put the seeded data back for the specs that count steps.
+  await moveTokensTo(/DEUS HCS Website/);
+  await expect(count()).toHaveCount(14);
+});
