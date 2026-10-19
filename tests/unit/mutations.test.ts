@@ -14,7 +14,7 @@ import {
   updateProject,
   updateStep,
 } from "@/db/mutations";
-import { getProjectBySlug, getProjectSteps, listMoveTargets, listProjects, listRecentlyDeletedSteps, usageRows } from "@/db/queries";
+import { getProjectBySlug, getProjectSteps, listMoveTargets, listProjectLinks, listProjects, listRecentlyDeletedSteps, usageRows } from "@/db/queries";
 import type { Effort } from "@/lib/parse-notes";
 import { statsByModel } from "@/lib/stats";
 import { MAX_PASTE_CHARS } from "@/lib/schemas";
@@ -296,6 +296,15 @@ describe("moveStepToProject", () => {
     await deleteProject(c.id);
     expect((await listMoveTargets(a.id)).map((p) => p.name)).toEqual(["Wedding"]);
     expect(b.id).toBeTruthy();
+  });
+
+  it("lists every non-deleted project A–Z, ignoring case, for the switcher", async () => {
+    await createProject({ name: "wedding" });
+    await createProject({ name: "DEUS" });
+    await createProject({ name: "apex" });
+    const gone = await createProject({ name: "Gone" });
+    await deleteProject(gone.id);
+    expect((await listProjectLinks()).map((p) => p.name)).toEqual(["apex", "DEUS", "wedding"]);
   });
 });
 

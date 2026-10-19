@@ -82,6 +82,15 @@ export async function listMoveTargets(excludeProjectId: string): Promise<{ id: s
     .orderBy(desc(projects.updatedAt));
 }
 
+/** Every non-deleted project, A–Z by name, for the project switcher. */
+export async function listProjectLinks(): Promise<{ id: string; name: string; slug: string }[]> {
+  return db
+    .select({ id: projects.id, name: projects.name, slug: projects.slug })
+    .from(projects)
+    .where(isNull(projects.deletedAt))
+    .orderBy(asc(sql`lower(${projects.name})`));
+}
+
 export async function listRecentlyDeletedSteps(projectId: string): Promise<StepWithUsages[]> {
   const since = new Date(Date.now() - RECENTLY_DELETED_DAYS * 86_400_000);
   const list = await db

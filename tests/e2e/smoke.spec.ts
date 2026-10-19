@@ -55,3 +55,22 @@ test("the project name switches to another project", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "DEUS HCS Website", level: 1 })).toBeVisible();
   await expect(page.locator("[data-step-id]")).toHaveCount(7);
 });
+
+test("the switcher on settings opens the other project's settings", async ({ page }) => {
+  await page.goto("/p/wedding-plan-redesign/settings");
+  await page.getByRole("button", { name: "Wedding Plan Redesign" }).click();
+  await page.getByRole("menuitem", { name: "DEUS HCS Website" }).click();
+  await expect(page).toHaveURL(/\/p\/deus-hcs-website\/settings$/);
+  await expect(page.getByLabel("Name", { exact: true })).toHaveValue("DEUS HCS Website");
+});
+
+test("the switcher on edit step opens the other project's page", async ({ page }) => {
+  await page.goto("/p/wedding-plan-redesign");
+  await page.getByRole("button", { name: "Actions for Capability Inventory Mapping" }).click();
+  await page.getByRole("menuitem", { name: "Edit" }).click();
+  await expect(page.getByRole("heading", { name: "Edit step", level: 1 })).toBeVisible();
+  await page.getByRole("button", { name: "Wedding Plan Redesign" }).click();
+  await page.getByRole("menuitem", { name: "DEUS HCS Website" }).click();
+  await expect(page).toHaveURL(/\/p\/deus-hcs-website$/);
+  await expect(page.locator("[data-step-id]")).toHaveCount(7);
+});

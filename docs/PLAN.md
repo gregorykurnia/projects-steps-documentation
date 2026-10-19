@@ -36,7 +36,7 @@ A small, professional-looking website that documents my AI projects. Each **proj
 
 **Project page (`/p/[slug]`)**
 - Header: name, description, status, date range, **Paste steps** button (always visible, top right; on phone a fixed button at the bottom).
-- **Project switcher:** the project name in the header opens a menu listing every project (A–Z, the current one ticked); picking one opens its page. The menu ends with "All projects" and "New project".
+- **Project switcher:** the project name in the header opens a menu listing every project (A–Z, the current one ticked); picking one opens its page. The menu ends with "All projects" and "New project". The same switcher sits in a small line above the title on project settings (picking a project opens *its* settings) and on edit step (picking a project opens its page, since the step isn't there).
 - **Summary tiles:** total cost, total input, total output, total cache read, total cache write, total API time, total wall time, number of steps.
 - **Stats per model** (the table the owner asked for). One row per model + effort (e.g. "Opus 5.5 · High", "Opus 5.5 · Medium", "Opus 5.5" when no effort was written, "Sonnet 5.5 · High", "Haiku 5.5 · Max"), with columns:
   - Steps (how many steps used it)
@@ -319,7 +319,7 @@ Built in one session by **Sonnet 5.5 High** (owner's choice). Order, committing 
 - 2026-10-14 (v0.3): Live on Vercel. The Vercel project's Framework Preset had to be set to Next.js by hand (it was imported while the repo was empty). The database client connects on first query, so builds don't need `DATABASE_URL`. The team is on Hobby, whose 100 deployments/day are shared by all my projects; a push can come back "rate limited" and needs a redeploy later.
 - 2026-10-14 (v0.3): The scaffold's `cacheComponents` / `partialPrefetching` flags are off: pages read the database on every request (dynamic), which is what this app wants. Radix primitives (`radix-ui`) are used directly with our tokens instead of the shadcn CLI, to avoid the default shadcn look.
 - 2026-10-15 (v0.4): Steps can be moved to another project from the step menu (see 1.3), with Undo. A moved step keeps its phase and sub-group and goes to the end of the target. Because it is moved rather than deleted, re-pasting running notes into the old project can add the step there again; accepted for now.
-- 2026-10-19 (v0.4): The project name on a project page is a switcher (see 1.3), so another project is one click away without going back to the home page. It reuses the move-to-project query, so it adds no extra database query.
+- 2026-10-19 (v0.4): The project name on a project page is a switcher (see 1.3), so another project is one click away without going back to the home page. Also on project settings and edit step. Its list comes from `listProjectLinks()` (non-deleted projects, A–Z by name).
 
 ## Project details
 | | |

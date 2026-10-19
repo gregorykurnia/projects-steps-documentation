@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Settings } from "lucide-react";
-import { existingFingerprints, getProjectBySlug, getProjectSteps, listMoveTargets, listRecentlyDeletedSteps, usageRows } from "@/db/queries";
+import { existingFingerprints, getProjectBySlug, getProjectSteps, listMoveTargets, listProjectLinks, listRecentlyDeletedSteps, usageRows } from "@/db/queries";
 import { statsByModel } from "@/lib/stats";
 import { stepCost } from "@/lib/steps-view";
 import { formatDate, formatDuration, formatExactTokens, formatTokens } from "@/lib/format";
@@ -40,20 +40,19 @@ export default async function ProjectPage({ params }: Props) {
   const project = await getProjectBySlug((await params).slug);
   if (!project) notFound();
 
-  const [steps, rows, fingerprints, deleted, moveTargets] = await Promise.all([
+  const [steps, rows, fingerprints, deleted, moveTargets, projectLinks] = await Promise.all([
     getProjectSteps(project.id),
     usageRows(project.id),
     existingFingerprints(project.id),
     listRecentlyDeletedSteps(project.id),
     listMoveTargets(project.id),
+    listProjectLinks(),
   ]);
   const byModelEffort = statsByModel(rows, { groupBy: "model+effort" });
   const byModel = statsByModel(rows, { groupBy: "model" });
   const t = byModel.total;
   const hasSteps = steps.length > 0;
   const range = dateRange(steps.map((s) => s.createdAt));
-  const current = { id: project.id, name: project.name, slug: project.slug };
-  const switcherProjects = [current, ...moveTargets].sort((a, b) => a.name.localeCompare(b.name));
   const tokenTile = (label: string, n: number) => (
     <StatTile label={label} value={<span title={formatExactTokens(n)}>{hasSteps ? formatTokens(n) : "—"}</span>} />
   );
@@ -61,7 +60,7 @@ export default async function ProjectPage({ params }: Props) {
   return (
     <div className="pb-20 sm:pb-0">
       <PageHeader
-        title={<ProjectSwitcher current={current} projects={switcherProjects} />}
+        title={<ProjectSwitcher currentId={project.id} projects={projectLinks} />}
         description={project.description}
         meta={
           <>
