@@ -10,6 +10,7 @@ import { CostBars } from "@/components/CostBars";
 import { EstimateNote } from "@/components/EstimateNote";
 import { ModelStatsTable } from "@/components/ModelStatsTable";
 import { PageHeader } from "@/components/PageHeader";
+import { ProjectSwitcher } from "@/components/ProjectSwitcher";
 import { StatTile } from "@/components/StatTile";
 import { StatusChip } from "@/components/StatusChip";
 import { PasteSteps } from "@/components/paste/PasteSteps";
@@ -51,6 +52,8 @@ export default async function ProjectPage({ params }: Props) {
   const t = byModel.total;
   const hasSteps = steps.length > 0;
   const range = dateRange(steps.map((s) => s.createdAt));
+  const current = { id: project.id, name: project.name, slug: project.slug };
+  const switcherProjects = [current, ...moveTargets].sort((a, b) => a.name.localeCompare(b.name));
   const tokenTile = (label: string, n: number) => (
     <StatTile label={label} value={<span title={formatExactTokens(n)}>{hasSteps ? formatTokens(n) : "—"}</span>} />
   );
@@ -58,7 +61,7 @@ export default async function ProjectPage({ params }: Props) {
   return (
     <div className="pb-20 sm:pb-0">
       <PageHeader
-        title={project.name}
+        title={<ProjectSwitcher current={current} projects={switcherProjects} />}
         description={project.description}
         meta={
           <>

@@ -35,3 +35,11 @@ export function MenuItem({
     />
   );
 }
+
+export function MenuLabel({ className, ...props }: React.ComponentProps<typeof DropdownMenu.Label>) {
+  return <DropdownMenu.Label className={clsx("px-2.5 py-1.5 text-xs text-muted", className)} {...props} />;
+}
+
+export function MenuSeparator({ className, ...props }: React.ComponentProps<typeof DropdownMenu.Separator>) {
+  return <DropdownMenu.Separator className={clsx("my-1 h-px bg-border", className)} {...props} />;
+}

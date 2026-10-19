@@ -45,3 +45,13 @@ test("model stats can be grouped by model only", async ({ page }) => {
   await page.getByRole("switch").click();
   await expect.poll(async () => rows.count()).toBeLessThan(before);
 });
+
+test("the project name switches to another project", async ({ page }) => {
+  await page.goto("/p/wedding-plan-redesign");
+  await page.getByRole("button", { name: "Wedding Plan Redesign" }).click();
+  await expect(page.getByRole("menuitem", { name: "Wedding Plan Redesign" })).toHaveAttribute("aria-current", "page");
+  await page.getByRole("menuitem", { name: "DEUS HCS Website" }).click();
+  await expect(page).toHaveURL(/\/p\/deus-hcs-website$/);
+  await expect(page.getByRole("heading", { name: "DEUS HCS Website", level: 1 })).toBeVisible();
+  await expect(page.locator("[data-step-id]")).toHaveCount(7);
+});

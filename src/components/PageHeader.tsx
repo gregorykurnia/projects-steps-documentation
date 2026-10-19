@@ -4,7 +4,7 @@ export function PageHeader({
   meta,
   actions,
 }: {
-  title: string;
+  title: React.ReactNode;
   description?: string | null;
   meta?: React.ReactNode;
   actions?: React.ReactNode;
