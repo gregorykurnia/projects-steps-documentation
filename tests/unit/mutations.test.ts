@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   addSteps,
+  addStepsToNamedProject,
   createProject,
   createProjectWithSteps,
   deleteProject,
@@ -181,6 +182,35 @@ describe("createProjectWithSteps", () => {
     const r = await createProjectWithSteps({ name: "Empty" }, "");
     expect(r.added).toEqual([]);
     expect((await listProjects()).map((p) => p.slug)).toEqual(["empty"]);
+  });
+});
+
+describe("addStepsToNamedProject", () => {
+  const ONE = "Task 1:  claude-opus-5-5 High:  10 input, 20 output, 30 cache read, 40 cache write ($0.50)";
+
+  it("adds to the project matched by slug or by name in any case", async () => {
+    const p = await createProject({ name: "DEUS Team Tasks Redesign" });
+    const bySlug = await addStepsToNamedProject("deus-team-tasks-redesign", ONE);
+    const byName = await addStepsToNamedProject("deus team tasks redesign", ONE.replace("Task 1", "Task 2"));
+    expect([bySlug.project.id, byName.project.id]).toEqual([p.id, p.id]);
+    expect((await getProjectSteps(p.id)).map((s) => s.title)).toEqual(["Task 1", "Task 2"]);
+    expect(await listProjects()).toHaveLength(1);
+  });
+
+  it("creates the project when there is none, and skips a session sent twice", async () => {
+    const first = await addStepsToNamedProject("wedding-planning", ONE);
+    expect(first.project).toMatchObject({ name: "wedding-planning", slug: "wedding-planning" });
+    expect(first.added).toHaveLength(1);
+    const again = await addStepsToNamedProject("wedding-planning", ONE);
+    expect([again.added.length, again.skipped]).toEqual([0, 1]);
+  });
+
+  it("doesn't add to a deleted project", async () => {
+    const p = await createProject({ name: "Gone" });
+    await deleteProject(p.id);
+    const r = await addStepsToNamedProject("Gone", ONE);
+    expect(r.project.id).not.toBe(p.id);
+    expect(r.project.slug).toBe("gone-2");
   });
 });
 

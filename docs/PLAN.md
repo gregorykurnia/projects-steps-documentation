@@ -67,6 +67,8 @@ A small, professional-looking website that documents my AI projects. Each **proj
 
 **Move to another project:** the step's "⋯" menu has "Move to project…", which opens a panel listing the other projects. Picking one moves the step there at once: it leaves the current project (it is moved, not deleted, so it isn't under "Recently deleted") and goes to the end of the other project's list, keeping its phase, sub-group, notes, model lines and durations. A toast says "Step moved to <project>" with an **Undo** for 10 seconds that puts it back in its old project and position. Both projects' totals update. One step at a time.
 
+**Sent by autorun:** my `autorun` script (it builds a plan's tasks unattended, one Claude session per task) sends each finished session here by itself, as the same kind of notes I'd paste: one step per session, titled with the task (e.g. "3.4 · Today screen"), one model line per model it used, with its recorded cost and the API and wall time. It goes to the project whose name or slug matches the one autorun sends (a project with that name is created if there is none). Steps already in the project are skipped exactly as when pasting, so sending the same session twice adds nothing. Without the key below, nothing can be sent.
+
 **Delete:** step and project deletes show an **Undo** toast for 10 seconds and go to a soft-deleted state (`deleted_at`). A small "Recently deleted" link at the bottom of the project page lists them with Restore, for 30 days. A project with steps can be deleted the same way (its steps go with it and come back with it).
 
 ### 1.4 What the paste understands
@@ -138,7 +140,7 @@ Login and roles, comments, file uploads, automatic import from Claude Code sessi
 | Writes | Server Actions + Zod; the server re-parses the pasted text itself instead of trusting the browser's preview | Default stack; one source of truth for parsing |
 | Styling | Tailwind CSS + a few shadcn/ui components (Button, Input, Textarea, Sheet, Dialog, DropdownMenu, Tooltip, Toast/Sonner, Switch), restyled to the tokens | Default stack, kept small |
 | Fonts / icons | `next/font` (Inter, JetBrains Mono), `lucide-react` | Default stack |
-| Auth | None (public, by choice). Basic abuse guard: request-size limit on paste (100 KB) and Zod limits on every field | Owner decision 2026-10-14 |
+| Auth | None (public, by choice). Basic abuse guard: request-size limit on paste (100 KB) and Zod limits on every field. The one exception is `POST /api/steps` (sent by autorun), which needs the secret `INGEST_KEY` | Owner decision 2026-10-14; key 2026-10-21 |
 | Tests | Vitest (parser, pricing, formatters, stats; DB tests on `test`) + Playwright (smoke + paste flow) | Default stack, minimal set |
 | Hosting | GitHub `main` → Vercel, every push deploys to production | Default stack |
 
@@ -153,7 +155,7 @@ Versions pinned to the latest stable at setup, checked against the installed pac
 | Vercel Preview | `test` | Vercel → Preview |
 | Vercel Production | `production` | Vercel → Production |
 
-Variables: `DATABASE_URL` (direct, migrations), `DATABASE_URL_POOLED` (app). `.env.example` lists names only. Never printed or committed. Migrations run on `test` first (`npm run db:migrate:test`), production (`npm run db:migrate`) only with my approval.
+Variables: `DATABASE_URL` (direct, migrations), `DATABASE_URL_POOLED` (app), `INGEST_KEY` (Production only: the key autorun sends steps with; without it `/api/steps` answers 503). `.env.example` lists names only. Never printed or committed. Migrations run on `test` first (`npm run db:migrate:test`), production (`npm run db:migrate`) only with my approval.
 
 ### 2.3 Data
 
@@ -212,6 +214,7 @@ step_usages                -- one row per model line in a step
 | `/p/[slug]/settings` | Edit project name, description, status; delete project |
 | `/new` | New project (name + optional paste) |
 | `not-found`, `error` | Styled 404 and error pages |
+| `POST /api/steps` | Steps sent by autorun: `Authorization: Bearer <INGEST_KEY>`, JSON `{ project, text }` (`project` is a name or slug, `text` is notes in the paste format). Answers `{ project, added, skipped, warnings }`. `GET` with the key only checks the key |
 
 Reading pages are Server Components that query Neon directly; every Server Action calls `revalidatePath` for the pages it changes.
 
@@ -227,6 +230,7 @@ Reading pages are Server Components that query Neon directly; every Server Actio
 - **`src/lib/format.ts`**: `formatTokens` (29.8k, 4.7M), `formatCost` ($5.68, "est." variant, "—"), `formatDuration` (2h 14m).
 - **Paste panel** (client component): textarea → `parseNotes` on input (debounced) → preview list with inline edits and "already added" detection against the project's fingerprints (sent with the page) → Server Action `addSteps(projectId, text, edits)` re-parses, validates with Zod, skips existing fingerprints, inserts all steps + usages in one transaction at the end of the project, returns the new step ids for highlighting.
 - **Move to project:** `moveStepToProject(stepId, targetProjectId, position?)` re-points `steps.project_id` (usages follow the step id) and sets `position` to the end of the target (or to `position` when undoing), in one transaction that also touches both projects' `updated_at`. It refuses a deleted or identical target. No migration. The menu's project list comes from `listMoveTargets(excludeProjectId)` (non-deleted projects, newest first).
+- **Steps sent by autorun:** `src/app/api/steps/route.ts` checks the key (`src/lib/ingest.ts`, constant-time compare; 503 when `INGEST_KEY` isn't set, 401 when it's wrong), validates the body with Zod, then calls `addStepsToNamedProject(project, text)` in `src/db/mutations.ts`: in one transaction it finds the non-deleted project whose slug is `slugify(project)` or whose name matches (any case), creates it if there is none, and runs the same code as a paste (`addStepsInTx`). On the autorun side (`~/.claude/scripts/autorun.sh`, repo `claude-config`) each session's ledger rows become notes text, kept in an outbox until the site accepts them.
 - **Undo:** delete actions set `deleted_at` and return an id; the toast's Undo calls `restore(id)`.
 - **Cost bars / share bars:** plain divs, width as a % of the max. No chart library.
 - **Theme:** CSS variables in `src/styles/tokens.css` (light + dark), Tailwind theme mapped to them, choice kept in a cookie so there's no flash.
@@ -282,6 +286,7 @@ Built in one session by **Sonnet 5.5 High** (owner's choice). Order, committing 
 - [x] 10. Paste panel, edit step, project settings, new project, undo / recently deleted
 - [x] 11. Playwright: smoke (home + project page read the DB) and paste flow (paste the DEUS notes into an empty project → 7 steps; re-paste → 0 added, 7 "already added"); screenshots at 390 and 1280, light and dark, checked by eye
 - [ ] 12. Deploy check: live URL loads (done 2026-10-14), Vercel spend limit set, Neon usage limit set
+- [x] 13. (2026-10-21) `POST /api/steps` for autorun, behind `INGEST_KEY`, with unit tests; autorun sends each session (see 1.3)
 - **Done when:** the live site shows both projects with correct totals and per-model stats matching a hand check of the seed files, and I can add a new step from my phone by pasting one line.
 
 ### 2.9 Running the live app
@@ -299,6 +304,7 @@ Built in one session by **Sonnet 5.5 High** (owner's choice). Order, committing 
 | Build step 1 | `! neon login`, `! vercel login`; paste the Neon connection strings into `.env.local` |
 | Build steps 3 / 6 | Approve the production migration and the production seed |
 | End | Try pasting a new step from my phone |
+| Autorun sending (2026-10-21) | Run `autorun buildlog-setup` on the server, add the key it prints to Vercel → Production as `INGEST_KEY`, redeploy |
 
 ---
 
@@ -320,6 +326,8 @@ Built in one session by **Sonnet 5.5 High** (owner's choice). Order, committing 
 - 2026-10-14 (v0.3): The scaffold's `cacheComponents` / `partialPrefetching` flags are off: pages read the database on every request (dynamic), which is what this app wants. Radix primitives (`radix-ui`) are used directly with our tokens instead of the shadcn CLI, to avoid the default shadcn look.
 - 2026-10-15 (v0.4): Steps can be moved to another project from the step menu (see 1.3), with Undo. A moved step keeps its phase and sub-group and goes to the end of the target. Because it is moved rather than deleted, re-pasting running notes into the old project can add the step there again; accepted for now.
 - 2026-10-19 (v0.4): The project name on a project page is a switcher (see 1.3), so another project is one click away without going back to the home page. Also on project settings and edit step. Its list comes from `listProjectLinks()` (non-deleted projects, A–Z by name).
+
+- 2026-10-21 (v0.5): autorun sends each session as a step by itself (see 1.3), through `POST /api/steps` with a secret key; the rest of the site stays public. This is autorun's own ledger, not Claude Code's session files, which stay out of scope (1.7). The project is matched by name or slug, so a folder can send to a project with another name.
 
 ## Project details
 | | |

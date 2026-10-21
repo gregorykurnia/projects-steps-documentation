@@ -184,6 +184,33 @@ export async function createProjectWithSteps(input: ProjectFieldsInput, text = "
   });
 }
 
+/**
+ * Adds steps sent by autorun to the project named `project` (its slug, or its name in any case),
+ * creating the project if there is none. Same parsing and duplicate skipping as a paste.
+ */
+export async function addStepsToNamedProject(project: string, text: string) {
+  const f = projectFieldsSchema.parse({ name: project });
+  pasteTextSchema.parse(text);
+  return db.transaction(async (tx) => {
+    let [found] = await tx
+      .select()
+      .from(projects)
+      .where(
+        and(
+          sql`${projects.deletedAt} is null`,
+          sql`(${projects.slug} = ${slugify(f.name)} or lower(${projects.name}) = lower(${f.name}))`,
+        ),
+      )
+      .orderBy(projects.createdAt)
+      .limit(1);
+    if (!found) {
+      const slug = await uniqueSlug(tx, f.name);
+      [found] = await tx.insert(projects).values({ slug, name: f.name, status: f.status }).returning();
+    }
+    return { project: found, ...(await addStepsInTx(tx, found.id, text, {})) };
+  });
+}
+
 async function projectOfStep(tx: Tx, stepId: string): Promise<string> {
   const [row] = await tx.select({ projectId: steps.projectId }).from(steps).where(eq(steps.id, stepId));
   if (!row) throw new Error("Step not found");
