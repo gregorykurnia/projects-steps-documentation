@@ -205,6 +205,17 @@ describe("addStepsToNamedProject", () => {
     expect([again.added.length, again.skipped]).toEqual([0, 1]);
   });
 
+  it("saves a Codex session and reads it back, with no recorded cost", async () => {
+    const r = await addStepsToNamedProject(
+      "codex-runs",
+      "C4.2 · Name plate:  gpt-6.1-sol Max:  10 input, 20 output, 30 cache read, 0 cache write ($0.0000)\nTotal duration (API): 0m 0s. Total duration (wall): 5m 1s",
+    );
+    expect([r.added.length, r.warnings]).toEqual([1, []]);
+    const [s] = await getProjectSteps(r.project.id);
+    expect(s).toMatchObject({ title: "C4.2 · Name plate", apiDurationS: null, wallDurationS: 301 });
+    expect(s.usages).toMatchObject([{ model: "gpt-6.1-sol", effort: "max", inputTokens: 10, outputTokens: 20, cacheRead: 30, costUsd: null }]);
+  });
+
   it("doesn't add to a deleted project", async () => {
     const p = await createProject({ name: "Gone" });
     await deleteProject(p.id);

@@ -1,4 +1,5 @@
 import { durationToText, parseCostText, parseCount, parseDurationText } from "./inputs";
+import { isModelId } from "./models";
 import type { Effort } from "./parse-notes";
 import type { StepFieldsInput } from "./schemas";
 
@@ -87,7 +88,7 @@ export function formToFields(form: StepForm): Result {
   const usages: StepFieldsInput["usages"] = [];
   for (const [i, u] of form.usages.entries()) {
     const n = `Model line ${i + 1}`;
-    if (!/^claude-[a-z0-9-]+$/i.test(u.model.trim())) return fail(`${n}: model must look like claude-opus-5-5`);
+    if (!isModelId(u.model.trim())) return fail(`${n}: model must look like claude-opus-5-5 or gpt-6.1-sol`);
     const counts: [string, string][] = [
       ["input", u.input],
       ["output", u.output],

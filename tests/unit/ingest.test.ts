@@ -56,3 +56,37 @@ describe("notes as autorun sends them", () => {
     ]);
   });
 });
+
+describe("Codex sessions as autorun sends them", () => {
+  const usage = { model: "gpt-6.1-sol", effort: "max", inputTokens: 412530, outputTokens: 38211, cacheRead: 6120448, cacheWrite: 0, costUsd: null };
+
+  it("reads the older format's $0 cost and 0s API time as not recorded", () => {
+    const { steps, warnings } = parseNotes(
+      [
+        "IMPLEMENTATION:",
+        "line 240 · C4.1 Story tags in `story/story.ink` for §2 (backgrounds A30, `# bgm`, `# figure`/`# pose` lines):  gpt-6.1-sol Max:  412530 input, 38211 output, 6120448 cache read, 0 cache write ($0.0000)",
+        "Total duration (API): 0m 0s. Total duration (wall): 31m 7s",
+      ].join("\n"),
+    );
+    expect(warnings).toEqual([]);
+    expect(steps).toHaveLength(1);
+    const [s] = steps;
+    expect(s.title).toBe("line 240 · C4.1 Story tags in `story/story.ink` for §2 (backgrounds A30, `# bgm`, `# figure`/`# pose` lines)");
+    expect(s.usages).toEqual([usage]);
+    expect([s.apiDurationS, s.wallDurationS]).toEqual([null, 1867]);
+  });
+
+  it("reads the current format, which leaves both out", () => {
+    const { steps, warnings } = parseNotes(
+      "IMPLEMENTATION:\nR4 · Chapter 4 review:  gpt-6-astra Xhigh:  10 input, 20 output, 30 cache read, 0 cache write\nTotal duration (wall): 1h 2m 3s",
+    );
+    expect(warnings).toEqual([]);
+    expect(steps[0].usages[0]).toMatchObject({ model: "gpt-6-astra", effort: "xhigh", costUsd: null });
+    expect([steps[0].apiDurationS, steps[0].wallDurationS]).toEqual([null, 3723]);
+  });
+
+  it("keeps a real $0 and a 0s API time on Claude lines", () => {
+    const [s] = parseNotes("Tiny:  claude-haiku-5-5:  1 input, 1 output ($0.0000). Total duration (API): 0s").steps;
+    expect([s.usages[0].costUsd, s.apiDurationS]).toEqual([0, 0]);
+  });
+});

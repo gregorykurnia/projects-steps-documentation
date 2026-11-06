@@ -44,6 +44,13 @@ describe("estimateCost", () => {
     ).toBeCloseTo(2, 6);
   });
 
+  it("prices the GPT models Codex runs at OpenAI's short-context prices", () => {
+    // Sol: 2 + 10 + 0.10 + 2.50 (30-minute writes); Terra is half of Sol; Astra: 10 + 50 + 1 + 12.50
+    expect(estimateCost({ model: "gpt-6.1-sol", ...million })).toBeCloseTo(14.6, 6);
+    expect(estimateCost({ model: "gpt-6.1-terra", ...million })).toBeCloseTo(7.3, 6);
+    expect(estimateCost({ model: "gpt-6-astra", ...million })).toBeCloseTo(73.5, 6);
+  });
+
   it("returns null for a model it has no price for", () => {
     expect(estimateCost({ model: "claude-mystery-9", ...million })).toBeNull();
   });
@@ -54,8 +61,10 @@ describe("estimateCost", () => {
 });
 
 describe("knownModel", () => {
-  it("recognises the three priced models only", () => {
+  it("recognises the priced models only", () => {
     expect(knownModel("claude-opus-5-5")).toBe(true);
+    expect(knownModel("gpt-6.1-sol")).toBe(true);
+    expect(knownModel("gpt-5")).toBe(false);
     expect(knownModel("claude-haiku-5-5")).toBe(true);
     expect(knownModel("claude-opus-4-1")).toBe(false);
   });

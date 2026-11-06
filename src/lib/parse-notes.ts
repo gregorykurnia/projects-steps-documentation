@@ -1,3 +1,5 @@
+import { isGpt, MODEL_ID_SOURCE } from "./models";
+
 export type Effort = "low" | "medium" | "high" | "xhigh" | "max";
 
 export type ParsedUsage = {
@@ -32,7 +34,7 @@ export type ParseResult = {
 
 export const DEFAULT_PHASE = "Planning & design";
 
-const MODEL_RE = /(claude-[a-z0-9-]+)(?:\s+(low|medium|high|xhigh|max))?\s*:\s*/i;
+const MODEL_RE = new RegExp(`(${MODEL_ID_SOURCE})(?:\\s+(low|medium|high|xhigh|max))?\\s*:\\s*`, "i");
 const TOKENS_RE = /(\d[\d,]*(?:\.\d+)?)\s*([km])?\s+(input|output|cache\s+read|cache\s+write)\b/gi;
 const COST_RE = /\(\s*\$\s*(\d[\d,]*(?:\.\d+)?)\s*\)/;
 const DURATION_RE = /total duration\s*\((api|wall)\)\s*:\s*((?:\d+\s*[hms]\s*)+)/gi;
@@ -77,7 +79,7 @@ type ModelLine = {
 
 const MODEL_GLOBAL = new RegExp(MODEL_RE.source, "gi");
 
-/** One model's numbers: the text between its `claude-…:` and the next one (or the end of the line). */
+/** One model's numbers: the text between its `claude-…:` (or `gpt-…:`) and the next one (or the end of the line). */
 function readSegment(model: string, effort: Effort | null, text: string): ParsedUsage | null {
   const usage: ParsedUsage = {
     model,
@@ -100,14 +102,18 @@ function readSegment(model: string, effort: Effort | null, text: string): Parsed
   }
   if (!found) return null;
   const cost = COST_RE.exec(text);
-  if (cost) usage.costUsd = parseFloat(cost[1].replace(/,/g, ""));
+  if (cost) {
+    const value = parseFloat(cost[1].replace(/,/g, ""));
+    // Codex reports no dollar figure; autorun before 2026-11-06 wrote $0 for it, which means "not recorded".
+    usage.costUsd = value === 0 && isGpt(model) ? null : value;
+  }
   return usage;
 }
 
 /**
  * A line can hold several models ("claude-opus-5-5 High: … , claude-haiku-5-5: …"). Only a
- * `claude-…:` that is followed by token counts counts as a model, so a title like "Fix claude-md:"
- * stays part of the title.
+ * `claude-…:` or `gpt-…:` that is followed by token counts counts as a model, so a title like
+ * "Fix claude-md:" stays part of the title.
  */
 function parseModelLine(line: string): ModelLine | null {
   const matches = [...line.matchAll(MODEL_GLOBAL)];
@@ -230,5 +236,9 @@ export function parseNotes(text: string): ParseResult {
   });
 
   dropPending();
+  // Codex reports no API time either; the same autorun versions wrote "Total duration (API): 0m 0s".
+  for (const s of steps) {
+    if (s.apiDurationS === 0 && s.usages.every((u) => isGpt(u.model))) s.apiDurationS = null;
+  }
   return projectName === undefined ? { steps, warnings } : { projectName, steps, warnings };
 }

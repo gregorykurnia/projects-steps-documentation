@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isModelId } from "./models";
 
 /** Every write is validated against these limits (the site is public, so the server never trusts the browser). */
 export const MAX_PASTE_CHARS = 100_000;
@@ -14,7 +15,7 @@ const optionalText = (max: number) =>
     .transform((v) => (v ? v : null));
 
 export const usageSchema = z.object({
-  model: z.string().trim().toLowerCase().regex(/^claude-[a-z0-9-]{1,80}$/),
+  model: z.string().trim().toLowerCase().max(90).refine(isModelId, "model must look like claude-opus-5-5 or gpt-6.1-sol"),
   effort: z.enum(["low", "medium", "high", "xhigh", "max"]).nullable(),
   inputTokens: tokens,
   outputTokens: tokens,

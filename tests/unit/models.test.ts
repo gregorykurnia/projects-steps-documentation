@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { effortLabel, modelFamily, modelLabel, modelWithEffort } from "@/lib/models";
+import { effortLabel, isModelId, modelFamily, modelLabel, modelWithEffort } from "@/lib/models";
 import { formatDate } from "@/lib/format";
 
 describe("modelLabel", () => {
@@ -9,6 +9,9 @@ describe("modelLabel", () => {
     ["claude-haiku-5-5", "Haiku 5.5"],
     ["claude-opus-4-8", "Opus 4.8"],
     ["claude-fable-5-1", "Fable 5.1"],
+    ["gpt-6.1-sol", "GPT-6.1 Sol"],
+    ["gpt-6.1-terra", "GPT-6.1 Terra"],
+    ["gpt-6-astra", "GPT-6 Astra"],
   ])("%s → %s", (id, label) => expect(modelLabel(id)).toBe(label));
 
   it("falls back to the id for names it can't read", () => {
@@ -22,6 +25,17 @@ describe("modelFamily", () => {
     expect(modelFamily("claude-sonnet-5-5")).toBe("sonnet");
     expect(modelFamily("claude-haiku-5-5")).toBe("haiku");
     expect(modelFamily("claude-fable-5-1")).toBe("other");
+    expect(modelFamily("gpt-6.1-sol")).toBe("other");
+  });
+});
+
+describe("isModelId", () => {
+  it("takes Claude and GPT ids, in any case", () => {
+    expect(["claude-opus-5-5", "Claude-Haiku-5-5", "gpt-6.1-sol", "GPT-6-astra"].every(isModelId)).toBe(true);
+  });
+
+  it("refuses anything else", () => {
+    expect(["gpt", "gpt-", "gpt-6.1-sol.", "opus-5-5", "gemini-3-pro", "claude-opus 5"].some(isModelId)).toBe(false);
   });
 });
 

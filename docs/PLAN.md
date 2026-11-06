@@ -67,7 +67,7 @@ A small, professional-looking website that documents my AI projects. Each **proj
 
 **Move to another project:** the step's "⋯" menu has "Move to project…", which opens a panel listing the other projects. Picking one moves the step there at once: it leaves the current project (it is moved, not deleted, so it isn't under "Recently deleted") and goes to the end of the other project's list, keeping its phase, sub-group, notes, model lines and durations. A toast says "Step moved to <project>" with an **Undo** for 10 seconds that puts it back in its old project and position. Both projects' totals update. One step at a time.
 
-**Sent by autorun:** my `autorun` script (it builds a plan's tasks unattended, one Claude session per task) sends each finished session here by itself, as the same kind of notes I'd paste: one step per session, titled with the task (e.g. "3.4 · Today screen"), one model line per model it used, with its recorded cost and the API and wall time. It goes to the project whose name or slug matches the one autorun sends (a project with that name is created if there is none). Steps already in the project are skipped exactly as when pasting, so sending the same session twice adds nothing. Without the key below, nothing can be sent.
+**Sent by autorun:** my `autorun` script (it builds a plan's tasks unattended, one Claude or Codex session per task) sends each finished session here by itself, as the same kind of notes I'd paste: one step per session, titled with the task (e.g. "3.4 · Today screen"), one model line per model it used, with its recorded cost and the API and wall time. Codex sessions have no recorded cost or API time (Codex reports neither), so their cost is estimated (1.5) and their API time shows "—". It goes to the project whose name or slug matches the one autorun sends (a project with that name is created if there is none). Steps already in the project are skipped exactly as when pasting, so sending the same session twice adds nothing. Without the key below, nothing can be sent.
 
 **Delete:** step and project deletes show an **Undo** toast for 10 seconds and go to a soft-deleted state (`deleted_at`). A small "Recently deleted" link at the bottom of the project page lists them with Restore, for 30 days. A project with steps can be deleted the same way (its steps go with it and come back with it).
 
@@ -86,7 +86,8 @@ Taken from my two notes files in `docs/seed-data/`. Line by line:
 | Blank lines | Ignored |
 
 Details:
-- Model names are case-insensitive (`Claude-opus-5-5`, `claude-opus-5-5`); effort (`Low`, `Medium`, `High`, `xHigh`, `Max`, any case) is optional.
+- Model names are case-insensitive (`Claude-opus-5-5`, `claude-opus-5-5`); effort (`Low`, `Medium`, `High`, `xHigh`, `Max`, any case) is optional. GPT models from Codex (`gpt-6.1-sol`, `gpt-6-astra`, `gpt-6.1-terra`) are read the same way and shown as "GPT-6.1 Sol" etc.
+- A GPT line's `($0)` or a GPT-only step's `Total duration (API): 0m 0s` means "not recorded" (autorun before 2026-11-06 wrote zeros for Codex), so they're kept as missing, never as 0.
 - Numbers: plain (`534`), `k` (×1,000) and `m` (×1,000,000), stored as whole tokens.
 - Cost `($x.xx)` is optional; any number of decimals (`$0.4368`) is kept exactly. Missing → estimated (1.5).
 - Durations `Total duration (API)` / `Total duration (wall)` are optional, formats `45s`, `3m 56s`, `2h 14m 22s`, and may sit on the model line or the line after it.
@@ -104,9 +105,19 @@ Official prices per million tokens (Anthropic, as of 2026-10):
 | Haiku 5.5 (prompts up to 100K) | $0.10 | $0.50 | $0.01 | $0.125 / $0.20 |
 | Haiku 5.5 (prompts over 100K) | $0.50 | $2.50 | $0.05 | $0.625 / $1.00 |
 
+OpenAI's prices for the GPT models Codex runs (https://developers.openai.com/api/docs/pricing, checked 2026-11-06; standard tier, prompts up to 272K tokens):
+
+| Model | Input | Output | Cached input | Cache write 30m / 12h |
+|---|---|---|---|---|
+| GPT-6 Astra | $10.00 | $50.00 | $1.00 | $12.50 / $25.00 |
+| GPT-6.1 Sol | $2.00 | $10.00 | $0.10 | $2.50 / $5.00 |
+| GPT-6.1 Terra | $1.00 | $5.00 | $0.05 | $1.25 / $2.50 |
+
+Codex on a ChatGPT plan isn't billed per token, so a GPT estimate means "what this would cost on the API". It can't be calibrated (no recorded GPT costs) and uses the short-context, 30-minute-write prices; prompts over 272K cost 2× input and 1.5× output, so long sessions may be under-estimated.
+
 (Checked against Anthropic's pricing page on 2026-10-14 at build time. v0.2 had Sonnet cache reads at $0.20 and Haiku's unknown; the page says $0.10 and $0.01.)
 
-Two things the token totals alone can't tell: whether cache writes were 5-minute or 1-hour, and whether Haiku requests were in the over-100K price tier. So **the options are calibrated against my own recorded costs**: `npm run calibrate` tries each option per model against every recorded usage line in the seed data and prints the error of each. Result on 2026-10-14 (21 recorded lines): Opus 5.5 and Sonnet 5.5 match 1-hour cache writes (median error 0.2%), Haiku 5.5 matches the over-100K tier with 5-minute writes (median error 5.3%, only 2 lines). The page shows a footnote: "Estimates use rates calibrated on 21 recorded steps, typically within ±5%". Prices live in one file (`src/lib/pricing.ts`) so they're easy to update.
+Two things the token totals alone can't tell: whether cache writes were 5-minute or 1-hour, and whether Haiku requests were in the over-100K price tier. So **the options are calibrated against my own recorded costs**: `npm run calibrate` tries each option per model against every recorded usage line in the seed data and prints the error of each. Result on 2026-10-14 (21 recorded lines): Opus 5.5 and Sonnet 5.5 match 1-hour cache writes (median error 0.2%), Haiku 5.5 matches the over-100K tier with 5-minute writes (median error 5.3%, only 2 lines). The page shows a footnote: "Claude estimates use rates calibrated on 21 recorded steps, typically within ±5%; GPT estimates use OpenAI's list prices". Prices live in one file (`src/lib/pricing.ts`) so they're easy to update.
 
 ### 1.6 Look and feel (decided here, no design directions)
 - **Personality:** calm, precise, editorial-meets-dashboard. Think Linear / Vercel docs: white space, crisp numbers, one accent colour.
@@ -190,7 +201,7 @@ step_usages                -- one row per model line in a step
   id             uuid pk
   step_id        uuid not null references steps(id) on delete cascade
   position       integer not null
-  model          text not null      -- normalised: 'claude-opus-5-5'
+  model          text not null      -- normalised: 'claude-opus-5-5', 'gpt-6.1-sol'
   effort         text               -- 'low'|'medium'|'high'|'xhigh'|'max'|null
   input_tokens   bigint not null default 0
   output_tokens  bigint not null default 0
@@ -220,7 +231,7 @@ Reading pages are Server Components that query Neon directly; every Server Actio
 
 ### 2.5 Key pieces
 - **`src/lib/parse-notes.ts`**: pure function `parseNotes(text) → { projectName?, steps: ParsedStep[], warnings: {line, message}[] }`. Line classifier, in order:
-  1. A **model match** anywhere in the line: `/(claude-[a-z0-9-]+)(?:\s+(low|medium|high|xhigh|max))?\s*:\s*/i` followed by at least one `<number><k|m>? input|output|cache read|cache write`. Text before the match (minus the trailing `:`) is a title for a new step; without it, the line is another model line for the current step.
+  1. A **model match** anywhere in the line: `/(claude-[a-z0-9-]+|gpt-[a-z0-9]+(?:[.-][a-z0-9]+)*)(?:\s+(low|medium|high|xhigh|max))?\s*:\s*/i` followed by at least one `<number><k|m>? input|output|cache read|cache write`. Text before the match (minus the trailing `:`) is a title for a new step; without it, the line is another model line for the current step.
   2. Inside a model line: each `([\d.]+)\s*([km])?\s+(input|output|cache read|cache write)`, cost `\(\$([\d.]+)\)`, durations `Total duration \((API|wall)\):\s*((?:\d+\s*[hms]\s*)+)`.
   3. A durations-only line attaches to the current step.
   4. `^phase\b.*:?$` (case-insensitive) → sub-group. A line whose letters are all capitals → new phase (title-cased: "Implementation"), resetting the sub-group.
@@ -328,6 +339,7 @@ Built in one session by **Sonnet 5.5 High** (owner's choice). Order, committing 
 - 2026-10-19 (v0.4): The project name on a project page is a switcher (see 1.3), so another project is one click away without going back to the home page. Also on project settings and edit step. Its list comes from `listProjectLinks()` (non-deleted projects, A–Z by name).
 
 - 2026-10-21 (v0.5): autorun sends each session as a step by itself (see 1.3), through `POST /api/steps` with a secret key; the rest of the site stays public. This is autorun's own ledger, not Claude Code's session files, which stay out of scope (1.7). The project is matched by name or slug, so a folder can send to a project with another name.
+- 2026-11-06 (v0.6): GPT models (Codex sessions sent by autorun) are read, saved and shown like Claude ones, with costs estimated from OpenAI's prices (1.5). Before this the site answered "added 0" for them, so no Codex step was ever saved.
 
 ## Project details
 | | |

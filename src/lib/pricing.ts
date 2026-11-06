@@ -1,5 +1,6 @@
-// Official Anthropic prices in USD per million tokens, as of 2026-10-14
-// (https://platform.claude.com/docs/en/about-claude/pricing). Update here and every estimate follows.
+// Official prices in USD per million tokens: Anthropic's as of 2026-10-14
+// (https://platform.claude.com/docs/en/about-claude/pricing), OpenAI's as of 2026-11-06
+// (https://developers.openai.com/api/docs/pricing). Update here and every estimate follows.
 
 export type Price = {
   input: number;
@@ -25,6 +26,19 @@ const PRICING: Record<string, ModelPricing> = {
   "claude-haiku-5-5": {
     standard: { input: 0.1, output: 0.5, cacheRead: 0.01, cacheWrite5m: 0.125, cacheWrite1h: 0.2 },
     long: { input: 0.5, output: 2.5, cacheRead: 0.05, cacheWrite5m: 0.625, cacheWrite1h: 1 },
+  },
+  // GPT models (Codex sessions sent by autorun). OpenAI's cache writes last 30 minutes or 12 hours; they sit
+  // in the 5m / 1h slots. Prompts over 272K tokens cost more (2× input, 1.5× output), but token totals can't
+  // tell, so these short-context prices may under-estimate long sessions. Never calibrated: Codex records
+  // no cost to calibrate against.
+  "gpt-6-astra": {
+    standard: { input: 10, output: 50, cacheRead: 1, cacheWrite5m: 12.5, cacheWrite1h: 25 },
+  },
+  "gpt-6.1-sol": {
+    standard: { input: 2, output: 10, cacheRead: 0.1, cacheWrite5m: 2.5, cacheWrite1h: 5 },
+  },
+  "gpt-6.1-terra": {
+    standard: { input: 1, output: 5, cacheRead: 0.05, cacheWrite5m: 1.25, cacheWrite1h: 2.5 },
   },
 };
 
